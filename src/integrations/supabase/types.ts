@@ -14,7 +14,256 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      diagnoses: {
+        Row: {
+          confidence: string | null
+          created_at: string
+          crop: string | null
+          disease: string | null
+          home_remedy: string | null
+          id: string
+          image_url: string | null
+          scientific_solution: string | null
+          user_id: string
+        }
+        Insert: {
+          confidence?: string | null
+          created_at?: string
+          crop?: string | null
+          disease?: string | null
+          home_remedy?: string | null
+          id?: string
+          image_url?: string | null
+          scientific_solution?: string | null
+          user_id: string
+        }
+        Update: {
+          confidence?: string | null
+          created_at?: string
+          crop?: string | null
+          disease?: string | null
+          home_remedy?: string | null
+          id?: string
+          image_url?: string | null
+          scientific_solution?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      expert_questions: {
+        Row: {
+          created_at: string
+          id: string
+          question: string
+          status: string | null
+          topic: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          question: string
+          status?: string | null
+          topic?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          question?: string
+          status?: string | null
+          topic?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      expert_replies: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          question_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          question_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          question_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expert_replies_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "expert_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      listings: {
+        Row: {
+          category: string | null
+          contact: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          location: string | null
+          price: number
+          quantity: number | null
+          title: string
+          type: string
+          unit: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          contact?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          price?: number
+          quantity?: number | null
+          title: string
+          type?: string
+          unit?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          contact?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          location?: string | null
+          price?: number
+          quantity?: number | null
+          title?: string
+          type?: string
+          unit?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          location: string | null
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          location?: string | null
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          location?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      research_comments: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "research_comments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "research_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      research_posts: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string | null
+          published_at: string | null
+          source: string | null
+          summary: string | null
+          title: string
+          topic: string | null
+          url: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          source?: string | null
+          summary?: string | null
+          title: string
+          topic?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          source?: string | null
+          summary?: string | null
+          title?: string
+          topic?: string | null
+          url?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
