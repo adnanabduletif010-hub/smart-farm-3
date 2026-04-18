@@ -24,7 +24,7 @@ export type Database = {
           id: string
           image_url: string | null
           scientific_solution: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           confidence?: string | null
@@ -35,7 +35,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           scientific_solution?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           confidence?: string | null
@@ -46,7 +46,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           scientific_solution?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -57,7 +57,7 @@ export type Database = {
           question: string
           status: string | null
           topic: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -65,7 +65,7 @@ export type Database = {
           question: string
           status?: string | null
           topic?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -73,7 +73,7 @@ export type Database = {
           question?: string
           status?: string | null
           topic?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -83,21 +83,21 @@ export type Database = {
           created_at: string
           id: string
           question_id: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           body: string
           created_at?: string
           id?: string
           question_id: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           body?: string
           created_at?: string
           id?: string
           question_id?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -199,21 +199,21 @@ export type Database = {
           created_at: string
           id: string
           post_id: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           body: string
           created_at?: string
           id?: string
           post_id: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           body?: string
           created_at?: string
           id?: string
           post_id?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
