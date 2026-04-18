@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
@@ -141,8 +141,6 @@ function CommentList({ comments }: { comments: Comment[] }) {
 function CommentBox({ user, postId, onAdded }: { user: any; postId: string; onAdded: () => void }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
-  if (!user)
-    return <p className="text-xs text-muted-foreground text-center"><Link to="/auth" className="text-primary font-semibold underline">Sign in</Link> to comment.</p>;
   return (
     <form
       onSubmit={async (e) => {
@@ -150,7 +148,7 @@ function CommentBox({ user, postId, onAdded }: { user: any; postId: string; onAd
         if (!text.trim()) return;
         setLoading(true);
         const { error } = await supabase.from("research_comments").insert({
-          post_id: postId, user_id: user.id, body: text.trim(),
+          post_id: postId, user_id: user?.id ?? null, body: text.trim(),
         });
         setLoading(false);
         if (error) return toast.error(error.message);
@@ -179,15 +177,12 @@ function NewPostDialog({ open, setOpen, user, onCreated }: { open: boolean; setO
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>Share a study</DialogTitle></DialogHeader>
-        {!user ? (
-          <p className="text-sm text-muted-foreground"><Link to="/auth" className="text-primary font-semibold underline">Sign in</Link> to share research.</p>
-        ) : (
           <form
             onSubmit={async (e) => {
               e.preventDefault();
               setLoading(true);
               const { error } = await supabase.from("research_posts").insert({
-                user_id: user.id,
+                user_id: user?.id ?? null,
                 title: form.title,
                 summary: form.summary || null,
                 source: form.source || null,
@@ -212,7 +207,6 @@ function NewPostDialog({ open, setOpen, user, onCreated }: { open: boolean; setO
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Publish"}
             </Button>
           </form>
-        )}
       </DialogContent>
     </Dialog>
   );

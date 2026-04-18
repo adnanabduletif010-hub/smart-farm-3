@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
@@ -70,17 +70,15 @@ function DiagnosePage() {
         toast.error("That doesn't look like a plant photo.");
       }
       setResult(r);
-      // Save history if logged in
-      if (user) {
-        await supabase.from("diagnoses").insert({
-          user_id: user.id,
-          crop: crop || null,
-          disease: r.disease,
-          confidence: r.confidence,
-          scientific_solution: r.scientific_solution,
-          home_remedy: r.home_remedy,
-        });
-      }
+      // Save history (associated with user if logged in, otherwise anonymous)
+      await supabase.from("diagnoses").insert({
+        user_id: user?.id ?? null,
+        crop: crop || null,
+        disease: r.disease,
+        confidence: r.confidence,
+        scientific_solution: r.scientific_solution,
+        home_remedy: r.home_remedy,
+      });
     } catch (e: any) {
       toast.error(e?.message ?? "Diagnosis failed");
     } finally {
@@ -160,11 +158,6 @@ function DiagnosePage() {
               )}
             </Button>
           </div>
-          {!user && (
-            <p className="text-[11px] text-muted-foreground text-center">
-              <Link to="/auth" className="text-primary font-semibold underline">Sign in</Link> to save your diagnosis history.
-            </p>
-          )}
         </div>
       </Card>
 

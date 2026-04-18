@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
@@ -124,15 +124,13 @@ function ExpertsPage() {
 function ReplyBox({ user, questionId, onAdded }: { user: any; questionId: string; onAdded: () => void }) {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
-  if (!user)
-    return <p className="text-xs text-muted-foreground text-center mt-4"><Link to="/auth" className="text-primary font-semibold underline">Sign in</Link> to reply.</p>;
   return (
     <form
       onSubmit={async (e) => {
         e.preventDefault();
         if (!text.trim()) return;
         setLoading(true);
-        const { error } = await supabase.from("expert_replies").insert({ question_id: questionId, user_id: user.id, body: text.trim() });
+        const { error } = await supabase.from("expert_replies").insert({ question_id: questionId, user_id: user?.id ?? null, body: text.trim() });
         setLoading(false);
         if (error) return toast.error(error.message);
         setText("");
@@ -165,15 +163,12 @@ function NewQuestionDialog({ user, onCreated }: { user: any; onCreated: () => vo
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader><DialogTitle>Ask an expert</DialogTitle></DialogHeader>
-        {!user ? (
-          <p className="text-sm text-muted-foreground"><Link to="/auth" className="text-primary font-semibold underline">Sign in</Link> to ask a question.</p>
-        ) : (
           <form
             onSubmit={async (e) => {
               e.preventDefault();
               setLoading(true);
               const { error } = await supabase.from("expert_questions").insert({
-                user_id: user.id, topic: topic || null, question,
+                user_id: user?.id ?? null, topic: topic || null, question,
               });
               setLoading(false);
               if (error) return toast.error(error.message);
@@ -188,7 +183,6 @@ function NewQuestionDialog({ user, onCreated }: { user: any; onCreated: () => vo
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Post question"}
             </Button>
           </form>
-        )}
       </DialogContent>
     </Dialog>
   );
