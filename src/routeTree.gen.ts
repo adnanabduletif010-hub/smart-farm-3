@@ -9,10 +9,34 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResearchRouteImport } from './routes/research'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as MarketRouteImport } from './routes/market'
+import { Route as ExpertsRouteImport } from './routes/experts'
 import { Route as DiagnoseRouteImport } from './routes/diagnose'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 
+const ResearchRoute = ResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketRoute = MarketRouteImport.update({
+  id: '/market',
+  path: '/market',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpertsRoute = ExpertsRouteImport.update({
+  id: '/experts',
+  path: '/experts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DiagnoseRoute = DiagnoseRouteImport.update({
   id: '/diagnose',
   path: '/diagnose',
@@ -33,34 +57,100 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/diagnose': typeof DiagnoseRoute
+  '/experts': typeof ExpertsRoute
+  '/market': typeof MarketRoute
+  '/profile': typeof ProfileRoute
+  '/research': typeof ResearchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/diagnose': typeof DiagnoseRoute
+  '/experts': typeof ExpertsRoute
+  '/market': typeof MarketRoute
+  '/profile': typeof ProfileRoute
+  '/research': typeof ResearchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/diagnose': typeof DiagnoseRoute
+  '/experts': typeof ExpertsRoute
+  '/market': typeof MarketRoute
+  '/profile': typeof ProfileRoute
+  '/research': typeof ResearchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/diagnose'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/diagnose'
+    | '/experts'
+    | '/market'
+    | '/profile'
+    | '/research'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/diagnose'
-  id: '__root__' | '/' | '/auth' | '/diagnose'
+  to:
+    | '/'
+    | '/auth'
+    | '/diagnose'
+    | '/experts'
+    | '/market'
+    | '/profile'
+    | '/research'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/diagnose'
+    | '/experts'
+    | '/market'
+    | '/profile'
+    | '/research'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   DiagnoseRoute: typeof DiagnoseRoute
+  ExpertsRoute: typeof ExpertsRoute
+  MarketRoute: typeof MarketRoute
+  ProfileRoute: typeof ProfileRoute
+  ResearchRoute: typeof ResearchRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/research': {
+      id: '/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof ResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/market': {
+      id: '/market'
+      path: '/market'
+      fullPath: '/market'
+      preLoaderRoute: typeof MarketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/experts': {
+      id: '/experts'
+      path: '/experts'
+      fullPath: '/experts'
+      preLoaderRoute: typeof ExpertsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/diagnose': {
       id: '/diagnose'
       path: '/diagnose'
@@ -89,6 +179,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   DiagnoseRoute: DiagnoseRoute,
+  ExpertsRoute: ExpertsRoute,
+  MarketRoute: MarketRoute,
+  ProfileRoute: ProfileRoute,
+  ResearchRoute: ResearchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
