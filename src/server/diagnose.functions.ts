@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 
-type DiagnoseInput = { imageBase64: string; crop?: string; mimeType?: string };
+type DiagnoseInput = { imageBase64: string; crop?: string; mimeType?: string; lang?: "en" | "om" | "am" };
+
+const LANG_NAME = { en: "English", om: "Afaan Oromoo", am: "Amharic" } as const;
 
 type DiagnoseResult = {
   ok: true;
@@ -13,12 +15,15 @@ type DiagnoseResult = {
   is_plant: boolean;
 } | { ok: false; error: string };
 
-const SYSTEM = `You are an expert agronomist and plant pathologist helping smallholder farmers.
+function buildSystem(lang: "en" | "om" | "am") {
+  return `You are an expert agronomist and plant pathologist helping smallholder farmers.
 Analyze the uploaded crop/leaf photo. Identify any disease, pest or deficiency.
-Always respond by calling the function 'report_diagnosis'. Be practical, concise, farmer-friendly.
-Provide BOTH a scientific/commercial treatment AND a low-cost home remedy that uses common kitchen/farm items
-(neem, garlic, baking soda, ash, soap, milk, compost tea, etc.) for farmers without access to chemical products.
+Always respond by calling the function 'report_diagnosis'.
+Write ALL string fields (disease, scientific_solution, home_remedy, prevention) ENTIRELY in ${LANG_NAME[lang]}.
+Be practical, concise, farmer-friendly. Provide BOTH a scientific/commercial treatment AND a low-cost home remedy
+using common kitchen/farm items (neem, garlic, baking soda, ash, soap, milk, compost tea, etc.).
 If the image is not a plant, set is_plant=false and explain briefly.`;
+}
 
 export const diagnoseCrop = createServerFn({ method: "POST" })
   .inputValidator((d: DiagnoseInput) => {
@@ -29,6 +34,7 @@ export const diagnoseCrop = createServerFn({ method: "POST" })
       imageBase64: d.imageBase64,
       crop: (d.crop ?? "").slice(0, 80),
       mimeType: d.mimeType ?? "image/jpeg",
+      lang: (d.lang ?? "en") as "en" | "om" | "am",
     };
   })
   .handler(async ({ data }): Promise<DiagnoseResult> => {
@@ -45,7 +51,7 @@ export const diagnoseCrop = createServerFn({ method: "POST" })
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [
-            { role: "system", content: SYSTEM },
+            { role: "system", content: buildSystem(data.lang) },
             {
               role: "user",
               content: [
