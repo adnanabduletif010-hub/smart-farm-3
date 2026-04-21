@@ -264,6 +264,54 @@ export type Database = {
         }
         Relationships: []
       }
+      soil_readings: {
+        Row: {
+          created_at: string
+          device_name: string | null
+          field_name: string | null
+          id: string
+          moisture: number | null
+          nitrogen: number | null
+          notes: string | null
+          ph: number | null
+          phosphorus: number | null
+          potassium: number | null
+          source: string
+          temperature: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          device_name?: string | null
+          field_name?: string | null
+          id?: string
+          moisture?: number | null
+          nitrogen?: number | null
+          notes?: string | null
+          ph?: number | null
+          phosphorus?: number | null
+          potassium?: number | null
+          source?: string
+          temperature?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          device_name?: string | null
+          field_name?: string | null
+          id?: string
+          moisture?: number | null
+          nitrogen?: number | null
+          notes?: string | null
+          ph?: number | null
+          phosphorus?: number | null
+          potassium?: number | null
+          source?: string
+          temperature?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { diagnoseCrop } from "@/server/diagnose.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/diagnose")({
   head: () => ({
@@ -33,6 +34,7 @@ type Result = {
 
 function DiagnosePage() {
   const { user } = useAuth();
+  const { i18n, t } = useTranslation();
   const [crop, setCrop] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -60,7 +62,12 @@ function DiagnosePage() {
     try {
       const b64 = (preview || "").split(",")[1];
       const r = await diagnoseCrop({
-        data: { imageBase64: b64, crop, mimeType: file.type || "image/jpeg" },
+        data: {
+          imageBase64: b64,
+          crop,
+          mimeType: file.type || "image/jpeg",
+          lang: (i18n.language as "en" | "om" | "am") ?? "en",
+        },
       });
       if (!r.ok) {
         toast.error(r.error);

@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ResearchRouteImport } from './routes/research'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MarketRouteImport } from './routes/market'
+import { Route as IotRouteImport } from './routes/iot'
+import { Route as GuidesRouteImport } from './routes/guides'
 import { Route as ExpertsRouteImport } from './routes/experts'
 import { Route as DiagnoseRouteImport } from './routes/diagnose'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -30,6 +32,16 @@ const ProfileRoute = ProfileRouteImport.update({
 const MarketRoute = MarketRouteImport.update({
   id: '/market',
   path: '/market',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IotRoute = IotRouteImport.update({
+  id: '/iot',
+  path: '/iot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuidesRoute = GuidesRouteImport.update({
+  id: '/guides',
+  path: '/guides',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExpertsRoute = ExpertsRouteImport.update({
@@ -58,6 +70,8 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/diagnose': typeof DiagnoseRoute
   '/experts': typeof ExpertsRoute
+  '/guides': typeof GuidesRoute
+  '/iot': typeof IotRoute
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
@@ -67,6 +81,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/diagnose': typeof DiagnoseRoute
   '/experts': typeof ExpertsRoute
+  '/guides': typeof GuidesRoute
+  '/iot': typeof IotRoute
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
@@ -77,6 +93,8 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/diagnose': typeof DiagnoseRoute
   '/experts': typeof ExpertsRoute
+  '/guides': typeof GuidesRoute
+  '/iot': typeof IotRoute
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
@@ -88,6 +106,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/diagnose'
     | '/experts'
+    | '/guides'
+    | '/iot'
     | '/market'
     | '/profile'
     | '/research'
@@ -97,6 +117,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/diagnose'
     | '/experts'
+    | '/guides'
+    | '/iot'
     | '/market'
     | '/profile'
     | '/research'
@@ -106,6 +128,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/diagnose'
     | '/experts'
+    | '/guides'
+    | '/iot'
     | '/market'
     | '/profile'
     | '/research'
@@ -116,6 +140,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DiagnoseRoute: typeof DiagnoseRoute
   ExpertsRoute: typeof ExpertsRoute
+  GuidesRoute: typeof GuidesRoute
+  IotRoute: typeof IotRoute
   MarketRoute: typeof MarketRoute
   ProfileRoute: typeof ProfileRoute
   ResearchRoute: typeof ResearchRoute
@@ -142,6 +168,20 @@ declare module '@tanstack/react-router' {
       path: '/market'
       fullPath: '/market'
       preLoaderRoute: typeof MarketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/iot': {
+      id: '/iot'
+      path: '/iot'
+      fullPath: '/iot'
+      preLoaderRoute: typeof IotRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides': {
+      id: '/guides'
+      path: '/guides'
+      fullPath: '/guides'
+      preLoaderRoute: typeof GuidesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/experts': {
@@ -180,6 +220,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DiagnoseRoute: DiagnoseRoute,
   ExpertsRoute: ExpertsRoute,
+  GuidesRoute: GuidesRoute,
+  IotRoute: IotRoute,
   MarketRoute: MarketRoute,
   ProfileRoute: ProfileRoute,
   ResearchRoute: ResearchRoute,
