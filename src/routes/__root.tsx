@@ -36,9 +36,15 @@ export const Route = createRootRoute({
         content:
           "FarmBridge connects farmers to AI crop diagnosis, weather, market buyers, agronomy experts and the latest research.",
       },
-      { property: "og:title", content: "FarmBridge — Grow smarter, together" },
-      { property: "og:description", content: "AI plant disease diagnosis with scientific & home remedy solutions, marketplace, weather and expert chat." },
+      { property: "og:title", content: "FarmBridge — AI Plant Doctor, Market & Experts for Farmers" },
+      { property: "og:description", content: "FarmWise Connect empowers farmers with AI-driven insights, market access, and expert connections." },
       { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "FarmBridge — AI Plant Doctor, Market & Experts for Farmers" },
+      { name: "description", content: "FarmWise Connect empowers farmers with AI-driven insights, market access, and expert connections." },
+      { name: "twitter:description", content: "FarmWise Connect empowers farmers with AI-driven insights, market access, and expert connections." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ddfaf3ba-a8af-42aa-bbd9-cf46e460c1c0/id-preview-24b22e49--1cf15f7c-59be-46d7-93de-9b641adfc229.lovable.app-1776771624310.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ddfaf3ba-a8af-42aa-bbd9-cf46e460c1c0/id-preview-24b22e49--1cf15f7c-59be-46d7-93de-9b641adfc229.lovable.app-1776771624310.png" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
