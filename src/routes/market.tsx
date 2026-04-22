@@ -113,7 +113,7 @@ function MarketPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <p className="text-xl font-extrabold gradient-primary bg-clip-text text-transparent">
-                      ${Number(l.price).toFixed(2)}
+                      {Number(l.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-xs font-bold">Birr</span>
                     </p>
                     {l.unit && <p className="text-[10px] text-muted-foreground uppercase font-bold">per {l.unit}</p>}
                     {l.quantity != null && <p className="text-[10px] text-muted-foreground mt-1">{l.quantity} avail.</p>}
@@ -189,7 +189,7 @@ function NewListingDialog({
             <Field label="Title" required value={form.title} onChange={(v) => setForm({ ...form, title: v })} placeholder="Fresh tomatoes" />
             <Field label="Category" value={form.category} onChange={(v) => setForm({ ...form, category: v })} placeholder="Vegetable / Fertilizer / Seed…" />
             <div className="grid grid-cols-3 gap-2">
-              <Field label="Price" required value={form.price} onChange={(v) => setForm({ ...form, price: v })} type="number" placeholder="0.00" />
+              <Field label="Price (Birr)" required value={form.price} onChange={(v) => setForm({ ...form, price: v })} type="number" placeholder="0" />
               <Field label="Unit" value={form.unit} onChange={(v) => setForm({ ...form, unit: v })} placeholder="kg" />
               <Field label="Qty" value={form.quantity} onChange={(v) => setForm({ ...form, quantity: v })} type="number" placeholder="0" />
             </div>
