@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { CROP_GUIDES, type CropGuide } from "@/data/crop-guides";
 import { Sprout, Droplets, FlaskConical, Bug, Calendar, Layers, MapPin, Sparkles, Loader2, ArrowLeft } from "lucide-react";
 import { askCropGuide } from "@/server/guides.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/guides")({
@@ -61,12 +62,24 @@ function GuideDetail({ guide, lang, onBack }: { guide: CropGuide; lang: "en" | "
     if (!q.trim()) return;
     setLoading(true);
     setAnswer(null);
-    const res = await askCropGuide({
-      data: { crop: guide.name.en, question: q, lang: i18n.language as "en" | "om" | "am" },
-    });
-    setLoading(false);
-    if (!res.ok) return toast.error(res.error);
-    setAnswer(res.answer);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) {
+        setLoading(false);
+        return toast.error("Please sign in to ask the AI agronomist.");
+      }
+      const res = await askCropGuide({
+        data: { crop: guide.name.en, question: q, lang: i18n.language as "en" | "om" | "am" },
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setLoading(false);
+      if (!res.ok) return toast.error(res.error);
+      setAnswer(res.answer);
+    } catch (err) {
+      setLoading(false);
+      toast.error(err instanceof Error ? err.message : "Failed to get answer");
+    }
   }
 
   const sections: { icon: any; label: string; text: string }[] = [

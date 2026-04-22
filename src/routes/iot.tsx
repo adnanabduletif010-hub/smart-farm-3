@@ -88,30 +88,45 @@ function IoTPage() {
 
   async function askAdvice() {
     if (readings.length === 0) return toast.error(t("iot.noReadings"));
+    if (!user) return toast.error("Please sign in to get AI advice.");
     const r = readings[0];
     setAdviceLoading(true);
     setAdvice(null);
-    const res = await getSoilAdvice({
-      data: {
-        lang: i18n.language as "en" | "om" | "am",
-        reading: {
-          moisture: r.moisture,
-          nitrogen: r.nitrogen,
-          phosphorus: r.phosphorus,
-          potassium: r.potassium,
-          ph: r.ph,
-          temperature: r.temperature,
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) {
+        setAdviceLoading(false);
+        return toast.error("Please sign in to get AI advice.");
+      }
+      const res = await getSoilAdvice({
+        data: {
+          lang: i18n.language as "en" | "om" | "am",
+          reading: {
+            moisture: r.moisture,
+            nitrogen: r.nitrogen,
+            phosphorus: r.phosphorus,
+            potassium: r.potassium,
+            ph: r.ph,
+            temperature: r.temperature,
+          },
         },
-      },
-    });
-    setAdviceLoading(false);
-    if (!res.ok) return toast.error(res.error);
-    setAdvice({ status: res.status, advice: res.advice, actions: res.actions });
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setAdviceLoading(false);
+      if (!res.ok) return toast.error(res.error);
+      setAdvice({ status: res.status, advice: res.advice, actions: res.actions });
+    } catch (e) {
+      setAdviceLoading(false);
+      const msg = e instanceof Error ? e.message : "Failed to get advice";
+      toast.error(msg);
+    }
   }
 
   async function simulate() {
+    if (!user) return toast.error("Please sign in to save sensor readings.");
     const reading = {
-      user_id: user?.id ?? null,
+      user_id: user.id,
       device_name: "Demo Sensor",
       field_name: "Demo field",
       moisture: Math.round(20 + Math.random() * 60),
