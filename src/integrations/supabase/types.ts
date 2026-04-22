@@ -314,7 +314,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      listings_public: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string | null
+          image_url: string | null
+          location: string | null
+          price: number | null
+          quantity: number | null
+          title: string | null
+          type: string | null
+          unit: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          location?: string | null
+          price?: number | null
+          quantity?: number | null
+          title?: string | null
+          type?: string | null
+          unit?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          image_url?: string | null
+          location?: string | null
+          price?: number | null
+          quantity?: number | null
+          title?: string | null
+          type?: string | null
+          unit?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

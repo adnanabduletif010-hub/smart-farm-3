@@ -48,18 +48,21 @@ function MarketPage() {
 
   async function load() {
     setLoading(true);
+    // Authenticated users see full listings (with contact). Anonymous users get the
+    // public view that hides contact details for privacy.
+    const source = user ? "listings" : ("listings_public" as const);
     const { data, error } = await supabase
-      .from("listings")
+      .from(source as any)
       .select("*")
       .eq("type", tab)
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
-    setListings((data ?? []) as Listing[]);
+    setListings(((data ?? []) as unknown) as Listing[]);
     setLoading(false);
   }
   useEffect(() => {
     load();
-  }, [tab]);
+  }, [tab, user]);
 
   return (
     <AppShell title="Marketplace" subtitle="Buy, sell, connect">
