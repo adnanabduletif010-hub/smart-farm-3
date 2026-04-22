@@ -432,3 +432,205 @@ function Field({
     </div>
   );
 }
+
+type DeviceToken = {
+  id: string;
+  device_name: string;
+  field_name: string | null;
+  token: string;
+  created_at: string;
+  last_used_at: string | null;
+};
+
+function DeviceSetupDialog({ user }: { user: any }) {
+  const [open, setOpen] = useState(false);
+  const [tokens, setTokens] = useState<DeviceToken[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [deviceName, setDeviceName] = useState("");
+  const [fieldName, setFieldName] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
+  const ingestUrl =
+    typeof window !== "undefined" ? `${window.location.origin}/api/public/iot/ingest` : "";
+
+  async function load() {
+    if (!user) return;
+    const { data } = await supabase
+      .from("iot_device_tokens")
+      .select("*")
+      .order("created_at", { ascending: false });
+    setTokens((data ?? []) as DeviceToken[]);
+  }
+
+  useEffect(() => {
+    if (open) load();
+  }, [open, user?.id]);
+
+  function genToken() {
+    const arr = new Uint8Array(24);
+    crypto.getRandomValues(arr);
+    return "iot_" + Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function create() {
+    if (!user) return toast.error("Please sign in.");
+    if (!deviceName.trim()) return toast.error("Device name required");
+    setLoading(true);
+    const { error } = await supabase.from("iot_device_tokens").insert({
+      user_id: user.id,
+      device_name: deviceName.trim(),
+      field_name: fieldName.trim() || null,
+      token: genToken(),
+    });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Device registered");
+    setDeviceName("");
+    setFieldName("");
+    load();
+  }
+
+  async function remove(id: string) {
+    const { error } = await supabase.from("iot_device_tokens").delete().eq("id", id);
+    if (error) return toast.error(error.message);
+    setTokens((t) => t.filter((x) => x.id !== id));
+  }
+
+  function copy(text: string, key: string) {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 1500);
+  }
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        className="rounded-full h-9"
+        onClick={() => setOpen(true)}
+      >
+        <Radio className="h-4 w-4 mr-1.5" /> Connect device
+      </Button>
+      {open && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-fade-in"
+          onClick={() => setOpen(false)}
+        >
+          <Card
+            className="w-full max-w-lg p-5 border-0 shadow-glow animate-scale-in max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold mb-1">Connect a real sensor</h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Register your ESP32, Arduino, or Raspberry Pi to send live readings to FarmBridge.
+            </p>
+
+            <div className="space-y-2.5 mb-5">
+              <div className="grid grid-cols-2 gap-2.5">
+                <Field label="Device name" value={deviceName} onChange={setDeviceName} placeholder="ESP32 #1" />
+                <Field label="Field name" value={fieldName} onChange={setFieldName} placeholder="North field" />
+              </div>
+              <Button
+                onClick={create}
+                disabled={loading}
+                className="w-full rounded-full gradient-primary text-primary-foreground border-0"
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Generate device token"}
+              </Button>
+            </div>
+
+            {tokens.length > 0 && (
+              <>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Your devices
+                </h4>
+                <div className="space-y-2 mb-4">
+                  {tokens.map((tk) => {
+                    const curl = `curl -X POST ${ingestUrl} \\
+  -H "Content-Type: application/json" \\
+  -H "X-Device-Token: ${tk.token}" \\
+  -d '{"moisture":42,"nitrogen":35,"phosphorus":22,"potassium":110,"ph":6.5,"temperature":24.5}'`;
+                    return (
+                      <div key={tk.id} className="rounded-xl border bg-accent/30 p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold truncate">{tk.device_name}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {tk.field_name ?? "—"} · last used:{" "}
+                              {tk.last_used_at ? new Date(tk.last_used_at).toLocaleString() : "never"}
+                            </p>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 rounded-full text-muted-foreground hover:text-destructive"
+                            onClick={() => remove(tk.id)}
+                            aria-label="delete"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <code className="flex-1 text-[10px] bg-background rounded px-2 py-1 truncate font-mono">
+                            {tk.token}
+                          </code>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 rounded-full"
+                            onClick={() => copy(tk.token, `t-${tk.id}`)}
+                          >
+                            {copied === `t-${tk.id}` ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                          </Button>
+                        </div>
+                        <details className="text-[11px]">
+                          <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                            Show example request
+                          </summary>
+                          <div className="relative mt-1.5">
+                            <pre className="text-[10px] bg-background rounded p-2 overflow-x-auto font-mono whitespace-pre">
+{curl}
+                            </pre>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 rounded absolute top-1 right-1"
+                              onClick={() => copy(curl, `c-${tk.id}`)}
+                            >
+                              {copied === `c-${tk.id}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                            </Button>
+                          </div>
+                        </details>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            <div className="rounded-xl bg-accent/40 p-3 text-[11px] text-muted-foreground">
+              <p className="font-semibold text-foreground mb-1">Endpoint</p>
+              <code className="block bg-background rounded px-2 py-1 font-mono text-[10px] break-all">
+                POST {ingestUrl}
+              </code>
+              <p className="mt-2">
+                Send <code className="font-mono">moisture</code>, <code className="font-mono">nitrogen</code>,{" "}
+                <code className="font-mono">phosphorus</code>, <code className="font-mono">potassium</code>,{" "}
+                <code className="font-mono">ph</code>, <code className="font-mono">temperature</code> as JSON
+                with header <code className="font-mono">X-Device-Token</code>.
+              </p>
+            </div>
+
+            <Button
+              variant="ghost"
+              className="w-full mt-4 rounded-full"
+              onClick={() => setOpen(false)}
+            >
+              Close
+            </Button>
+          </Card>
+        </div>
+      )}
+    </>
+  );
+}
