@@ -109,6 +109,36 @@ export type Database = {
           },
         ]
       }
+      iot_device_tokens: {
+        Row: {
+          created_at: string
+          device_name: string
+          field_name: string | null
+          id: string
+          last_used_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_name: string
+          field_name?: string | null
+          id?: string
+          last_used_at?: string | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_name?: string
+          field_name?: string | null
+          id?: string
+          last_used_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       listings: {
         Row: {
           category: string | null
