@@ -246,7 +246,7 @@ function IoTPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-leaf/20 text-primary">
-                    {r.source === "simulated" ? <Cpu className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
+                    {r.source === "device" ? <Radio className="h-4 w-4" /> : r.source === "simulated" ? <Cpu className="h-4 w-4" /> : <Droplets className="h-4 w-4" />}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-bold truncate">
