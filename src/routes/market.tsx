@@ -57,7 +57,7 @@ function MarketPage() {
       .eq("type", tab)
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
-    setListings((data ?? []) as Listing[]);
+    setListings(((data ?? []) as unknown) as Listing[]);
     setLoading(false);
   }
   useEffect(() => {
