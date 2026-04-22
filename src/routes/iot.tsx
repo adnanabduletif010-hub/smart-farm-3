@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Droplets, Cpu, Sparkles, Trash2, Plus, Zap } from "lucide-react";
+import { Loader2, Droplets, Cpu, Sparkles, Trash2, Plus, Radio, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
