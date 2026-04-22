@@ -123,38 +123,6 @@ function IoTPage() {
     }
   }
 
-  async function simulate() {
-    if (!user) return toast.error("Please sign in to save sensor readings.");
-    // Realistic scenarios a smallholder farm might encounter
-    const scenarios = [
-      { name: "Healthy loam", field: "North field", moisture: [45, 60], n: [40, 60], p: [25, 40], k: [120, 160], ph: [6.2, 6.8], temp: [20, 26] },
-      { name: "Dry spell", field: "West field", moisture: [12, 22], n: [25, 40], p: [15, 25], k: [80, 110], ph: [6.0, 7.0], temp: [27, 33] },
-      { name: "Low nitrogen", field: "Maize plot", moisture: [35, 50], n: [8, 18], p: [20, 35], k: [100, 140], ph: [6.0, 6.8], temp: [21, 27] },
-      { name: "Acidic soil", field: "South slope", moisture: [40, 55], n: [30, 45], p: [10, 20], k: [70, 100], ph: [4.8, 5.4], temp: [19, 24] },
-      { name: "Waterlogged", field: "Lowland plot", moisture: [78, 92], n: [20, 35], p: [15, 25], k: [90, 120], ph: [6.5, 7.2], temp: [18, 22] },
-    ];
-    const s = scenarios[Math.floor(Math.random() * scenarios.length)];
-    const rand = ([a, b]: number[], decimals = 0) => +(a + Math.random() * (b - a)).toFixed(decimals);
-
-    const reading = {
-      user_id: user.id,
-      device_name: `FarmBridge Sensor ${String.fromCharCode(65 + Math.floor(Math.random() * 4))}`,
-      field_name: s.field,
-      moisture: rand(s.moisture),
-      nitrogen: rand(s.n),
-      phosphorus: rand(s.p),
-      potassium: rand(s.k),
-      ph: rand(s.ph, 1),
-      temperature: rand(s.temp, 1),
-      notes: `Simulated: ${s.name}`,
-      source: "simulated",
-    };
-    const { error } = await supabase.from("soil_readings").insert(reading);
-    if (error) return toast.error(error.message);
-    toast.success(`${t("iot.saved")} — ${s.name}`);
-    load();
-  }
-
   async function remove(id: string) {
     if (!user) return;
     const { error } = await supabase.from("soil_readings").delete().eq("id", id);
@@ -165,14 +133,7 @@ function IoTPage() {
   return (
     <AppShell title={t("iot.title")} subtitle={t("iot.subtitle")}>
       <div className="flex flex-wrap gap-2 mb-3 justify-end">
-        <Button
-          size="sm"
-          variant="outline"
-          className="rounded-full h-9"
-          onClick={simulate}
-        >
-          <Zap className="h-4 w-4 mr-1.5" /> {t("iot.simulate")}
-        </Button>
+        <DeviceSetupDialog user={user} />
         <AddReadingDialog user={user} onAdded={load} />
       </div>
 
