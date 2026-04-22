@@ -24,18 +24,46 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { t } = useTranslation();
   const [weather, setWeather] = useState<any>(null);
+  const [weatherPlace, setWeatherPlace] = useState<string>("Addis Ababa");
 
   useEffect(() => {
-    if (!("geolocation" in navigator)) return;
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const r = await getWeather({ data: { lat: pos.coords.latitude, lon: pos.coords.longitude } });
-        if (r.ok) setWeather(r.data);
-      },
-      () => {},
-      { timeout: 6000 },
-    );
+    let done = false;
+    const fetchFor = async (lat: number, lon: number, place: string) => {
+      if (done) return;
+      done = true;
+      setWeatherPlace(place);
+      const r = await getWeather({ data: { lat, lon } });
+      if (r.ok) setWeather(r.data);
+    };
+    // Default to Addis Ababa immediately so users always see real weather
+    const fallback = setTimeout(() => fetchFor(9.0300, 38.7400, "Addis Ababa"), 4000);
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          clearTimeout(fallback);
+          fetchFor(pos.coords.latitude, pos.coords.longitude, "Your location");
+        },
+        () => {
+          clearTimeout(fallback);
+          fetchFor(9.0300, 38.7400, "Addis Ababa");
+        },
+        { timeout: 4000 },
+      );
+    }
+    return () => clearTimeout(fallback);
   }, []);
+
+  const weatherCodeLabel = (code?: number) => {
+    if (code == null) return "";
+    if (code === 0) return "Clear sky";
+    if ([1, 2, 3].includes(code)) return "Partly cloudy";
+    if ([45, 48].includes(code)) return "Foggy";
+    if ([51, 53, 55, 56, 57].includes(code)) return "Drizzle";
+    if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return "Rain";
+    if ([71, 73, 75, 77, 85, 86].includes(code)) return "Snow";
+    if ([95, 96, 99].includes(code)) return "Thunderstorm";
+    return "Cloudy";
+  };
 
   const features = [
     { to: "/diagnose", icon: Leaf, title: t("home.diagnose"), desc: t("home.diagnoseDesc"), color: "from-leaf to-primary" },
@@ -69,17 +97,23 @@ function Home() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-                {t("home.todayWeather")}
+                {t("home.todayWeather")} · {weatherPlace}
               </p>
               {weather?.current ? (
-                <p className="text-base font-bold leading-tight">
-                  {Math.round(weather.current.temperature_2m)}°C ·{" "}
-                  <span className="text-muted-foreground font-normal">
-                    {weather.current.relative_humidity_2m}% humidity
-                  </span>
-                </p>
+                <>
+                  <p className="text-base font-bold leading-tight">
+                    {Math.round(weather.current.temperature_2m)}°C ·{" "}
+                    <span className="font-semibold">{weatherCodeLabel(weather.current.weather_code)}</span>
+                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Humidity {weather.current.relative_humidity_2m}% · Wind {Math.round(weather.current.wind_speed_10m)} km/h
+                    {typeof weather.current.precipitation === "number" && weather.current.precipitation > 0
+                      ? ` · Rain ${weather.current.precipitation} mm`
+                      : ""}
+                  </p>
+                </>
               ) : (
-                <p className="text-sm text-muted-foreground">{t("home.allowLocation")}</p>
+                <p className="text-sm text-muted-foreground">Loading weather…</p>
               )}
             </div>
             <ArrowRight className="h-4 w-4 text-muted-foreground" />
