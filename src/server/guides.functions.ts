@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type AskInput = {
   crop: string;
@@ -11,6 +12,7 @@ type AskResult = { ok: true; answer: string } | { ok: false; error: string };
 const LANG_NAME = { en: "English", om: "Afaan Oromoo", am: "Amharic" } as const;
 
 export const askCropGuide = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: AskInput) => {
     if (!d?.crop || !d?.question) throw new Error("crop and question required");
     return {

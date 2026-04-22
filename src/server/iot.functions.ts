@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type AdviceInput = {
   lang?: "en" | "om" | "am";
@@ -20,6 +21,7 @@ type AdviceResult =
 const LANG_NAME = { en: "English", om: "Afaan Oromoo", am: "Amharic" } as const;
 
 export const getSoilAdvice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: AdviceInput) => {
     if (!d?.reading) throw new Error("reading required");
     return {
