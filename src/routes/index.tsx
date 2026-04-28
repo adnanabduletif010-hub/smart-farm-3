@@ -24,34 +24,37 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { t } = useTranslation();
   const [weather, setWeather] = useState<any>(null);
-  const [weatherPlace, setWeatherPlace] = useState<string>("Addis Ababa");
+  const [alerts, setAlerts] = useState<WeatherAlert[]>([]);
+  const [weatherPlace, setWeatherPlace] = useState<string>("");
+  const [geoStatus, setGeoStatus] = useState<"idle" | "asking" | "denied" | "loading" | "ready" | "error">("asking");
 
-  useEffect(() => {
-    let done = false;
-    const fetchFor = async (lat: number, lon: number, place: string) => {
-      if (done) return;
-      done = true;
-      setWeatherPlace(place);
-      const r = await getWeather({ data: { lat, lon } });
-      if (r.ok) setWeather(r.data);
-    };
-    // Default to Addis Ababa immediately so users always see real weather
-    const fallback = setTimeout(() => fetchFor(9.0300, 38.7400, "Addis Ababa"), 4000);
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          clearTimeout(fallback);
-          fetchFor(pos.coords.latitude, pos.coords.longitude, "Your location");
-        },
-        () => {
-          clearTimeout(fallback);
-          fetchFor(9.0300, 38.7400, "Addis Ababa");
-        },
-        { timeout: 4000 },
-      );
+  async function loadFor(lat: number, lon: number) {
+    setGeoStatus("loading");
+    const r = await getWeather({ data: { lat, lon } });
+    if (r.ok) {
+      setWeather(r.data);
+      setAlerts(r.alerts ?? []);
+      setWeatherPlace(r.place ?? "Your location");
+      setGeoStatus("ready");
+    } else {
+      setGeoStatus("error");
     }
-    return () => clearTimeout(fallback);
-  }, []);
+  }
+
+  function requestLocation() {
+    if (!("geolocation" in navigator)) {
+      setGeoStatus("denied");
+      return;
+    }
+    setGeoStatus("asking");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => loadFor(pos.coords.latitude, pos.coords.longitude),
+      () => setGeoStatus("denied"),
+      { timeout: 8000, enableHighAccuracy: true },
+    );
+  }
+
+  useEffect(() => { requestLocation(); }, []);
 
   const weatherCodeLabel = (code?: number) => {
     if (code == null) return "";
@@ -64,6 +67,12 @@ function Home() {
     if ([95, 96, 99].includes(code)) return "Thunderstorm";
     return "Cloudy";
   };
+
+  const severityClass = (s: WeatherAlert["severity"]) =>
+    s === "danger" ? "bg-destructive/15 border-destructive/40 text-destructive"
+    : s === "warning" ? "bg-sun/20 border-sun/40 text-earth"
+    : s === "watch" ? "bg-accent border-border text-foreground"
+    : "bg-leaf/15 border-leaf/40 text-primary";
 
   const features = [
     { to: "/diagnose", icon: Leaf, title: t("home.diagnose"), desc: t("home.diagnoseDesc"), color: "from-leaf to-primary" },
