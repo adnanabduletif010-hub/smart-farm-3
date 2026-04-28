@@ -14,6 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      crop_guides: {
+        Row: {
+          created_at: string
+          emoji: string | null
+          fertilizer_am: string | null
+          fertilizer_en: string | null
+          fertilizer_om: string | null
+          harvest_am: string | null
+          harvest_en: string | null
+          harvest_om: string | null
+          id: string
+          name_am: string | null
+          name_en: string
+          name_om: string | null
+          pests_am: string | null
+          pests_en: string | null
+          pests_om: string | null
+          slug: string
+          soil_am: string | null
+          soil_en: string | null
+          soil_om: string | null
+          spacing_am: string | null
+          spacing_en: string | null
+          spacing_om: string | null
+          updated_at: string
+          water_am: string | null
+          water_en: string | null
+          water_om: string | null
+          zone_am: string | null
+          zone_en: string | null
+          zone_om: string | null
+        }
+        Insert: {
+          created_at?: string
+          emoji?: string | null
+          fertilizer_am?: string | null
+          fertilizer_en?: string | null
+          fertilizer_om?: string | null
+          harvest_am?: string | null
+          harvest_en?: string | null
+          harvest_om?: string | null
+          id?: string
+          name_am?: string | null
+          name_en: string
+          name_om?: string | null
+          pests_am?: string | null
+          pests_en?: string | null
+          pests_om?: string | null
+          slug: string
+          soil_am?: string | null
+          soil_en?: string | null
+          soil_om?: string | null
+          spacing_am?: string | null
+          spacing_en?: string | null
+          spacing_om?: string | null
+          updated_at?: string
+          water_am?: string | null
+          water_en?: string | null
+          water_om?: string | null
+          zone_am?: string | null
+          zone_en?: string | null
+          zone_om?: string | null
+        }
+        Update: {
+          created_at?: string
+          emoji?: string | null
+          fertilizer_am?: string | null
+          fertilizer_en?: string | null
+          fertilizer_om?: string | null
+          harvest_am?: string | null
+          harvest_en?: string | null
+          harvest_om?: string | null
+          id?: string
+          name_am?: string | null
+          name_en?: string
+          name_om?: string | null
+          pests_am?: string | null
+          pests_en?: string | null
+          pests_om?: string | null
+          slug?: string
+          soil_am?: string | null
+          soil_en?: string | null
+          soil_om?: string | null
+          spacing_am?: string | null
+          spacing_en?: string | null
+          spacing_om?: string | null
+          updated_at?: string
+          water_am?: string | null
+          water_en?: string | null
+          water_om?: string | null
+          zone_am?: string | null
+          zone_en?: string | null
+          zone_om?: string | null
+        }
+        Relationships: []
+      }
       diagnoses: {
         Row: {
           confidence: string | null
@@ -342,6 +438,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       listings_public: {
@@ -391,10 +508,16 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -521,6 +644,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
