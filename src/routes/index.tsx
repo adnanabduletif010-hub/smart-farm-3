@@ -4,12 +4,12 @@ import { Card } from "@/components/ui/card";
 import {
   Leaf, ShoppingBag, BookOpen, MessageCircle,
   CloudSun, Sparkles, ArrowRight, TrendingUp,
-  Droplets, Sprout,
+  Droplets, Sprout, AlertTriangle, MapPin,
 } from "lucide-react";
 import heroImg from "@/assets/farm-hero.jpg";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getWeather } from "@/server/weather.functions";
+import { getWeather, type WeatherAlert } from "@/server/weather.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
