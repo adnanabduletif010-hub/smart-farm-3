@@ -4,12 +4,12 @@ import { Card } from "@/components/ui/card";
 import {
   Leaf, ShoppingBag, BookOpen, MessageCircle,
   CloudSun, Sparkles, ArrowRight, TrendingUp,
-  Droplets, Sprout,
+  Droplets, Sprout, AlertTriangle, MapPin,
 } from "lucide-react";
 import heroImg from "@/assets/farm-hero.jpg";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getWeather } from "@/server/weather.functions";
+import { getWeather, type WeatherAlert } from "@/server/weather.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,34 +24,37 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { t } = useTranslation();
   const [weather, setWeather] = useState<any>(null);
-  const [weatherPlace, setWeatherPlace] = useState<string>("Addis Ababa");
+  const [alerts, setAlerts] = useState<WeatherAlert[]>([]);
+  const [weatherPlace, setWeatherPlace] = useState<string>("");
+  const [geoStatus, setGeoStatus] = useState<"idle" | "asking" | "denied" | "loading" | "ready" | "error">("asking");
 
-  useEffect(() => {
-    let done = false;
-    const fetchFor = async (lat: number, lon: number, place: string) => {
-      if (done) return;
-      done = true;
-      setWeatherPlace(place);
-      const r = await getWeather({ data: { lat, lon } });
-      if (r.ok) setWeather(r.data);
-    };
-    // Default to Addis Ababa immediately so users always see real weather
-    const fallback = setTimeout(() => fetchFor(9.0300, 38.7400, "Addis Ababa"), 4000);
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          clearTimeout(fallback);
-          fetchFor(pos.coords.latitude, pos.coords.longitude, "Your location");
-        },
-        () => {
-          clearTimeout(fallback);
-          fetchFor(9.0300, 38.7400, "Addis Ababa");
-        },
-        { timeout: 4000 },
-      );
+  async function loadFor(lat: number, lon: number) {
+    setGeoStatus("loading");
+    const r = await getWeather({ data: { lat, lon } });
+    if (r.ok) {
+      setWeather(r.data);
+      setAlerts(r.alerts ?? []);
+      setWeatherPlace(r.place ?? "Your location");
+      setGeoStatus("ready");
+    } else {
+      setGeoStatus("error");
     }
-    return () => clearTimeout(fallback);
-  }, []);
+  }
+
+  function requestLocation() {
+    if (!("geolocation" in navigator)) {
+      setGeoStatus("denied");
+      return;
+    }
+    setGeoStatus("asking");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => loadFor(pos.coords.latitude, pos.coords.longitude),
+      () => setGeoStatus("denied"),
+      { timeout: 8000, enableHighAccuracy: true },
+    );
+  }
+
+  useEffect(() => { requestLocation(); }, []);
 
   const weatherCodeLabel = (code?: number) => {
     if (code == null) return "";
@@ -64,6 +67,12 @@ function Home() {
     if ([95, 96, 99].includes(code)) return "Thunderstorm";
     return "Cloudy";
   };
+
+  const severityClass = (s: WeatherAlert["severity"]) =>
+    s === "danger" ? "bg-destructive/15 border-destructive/40 text-destructive"
+    : s === "warning" ? "bg-sun/20 border-sun/40 text-earth"
+    : s === "watch" ? "bg-accent border-border text-foreground"
+    : "bg-leaf/15 border-leaf/40 text-primary";
 
   const features = [
     { to: "/diagnose", icon: Leaf, title: t("home.diagnose"), desc: t("home.diagnoseDesc"), color: "from-leaf to-primary" },
@@ -89,37 +98,79 @@ function Home() {
         </div>
       </section>
 
-      <Link to="/iot" className="block mt-4">
-        <Card className="p-4 border-0 shadow-soft bg-gradient-to-br from-card to-accent/30 animate-fade-up">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl gradient-sun shadow-soft">
-              <CloudSun className="h-6 w-6 text-sun-foreground" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
-                {t("home.todayWeather")} · {weatherPlace}
-              </p>
-              {weather?.current ? (
-                <>
-                  <p className="text-base font-bold leading-tight">
-                    {Math.round(weather.current.temperature_2m)}°C ·{" "}
-                    <span className="font-semibold">{weatherCodeLabel(weather.current.weather_code)}</span>
-                  </p>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    Humidity {weather.current.relative_humidity_2m}% · Wind {Math.round(weather.current.wind_speed_10m)} km/h
-                    {typeof weather.current.precipitation === "number" && weather.current.precipitation > 0
-                      ? ` · Rain ${weather.current.precipitation} mm`
-                      : ""}
-                  </p>
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground">Loading weather…</p>
-              )}
-            </div>
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+      <Card className="mt-4 p-4 border-0 shadow-soft bg-gradient-to-br from-card to-accent/30 animate-fade-up">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl gradient-sun shadow-soft shrink-0">
+            <CloudSun className="h-6 w-6 text-sun-foreground" />
           </div>
-        </Card>
-      </Link>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
+              <MapPin className="h-3 w-3" /> {t("home.todayWeather")} · {weatherPlace || "—"}
+            </p>
+            {weather?.current ? (
+              <>
+                <p className="text-base font-bold leading-tight">
+                  {Math.round(weather.current.temperature_2m)}°C ·{" "}
+                  <span className="font-semibold">{weatherCodeLabel(weather.current.weather_code)}</span>
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Humidity {weather.current.relative_humidity_2m}% · Wind {Math.round(weather.current.wind_speed_10m)} km/h
+                  {typeof weather.current.precipitation === "number" && weather.current.precipitation > 0
+                    ? ` · Rain ${weather.current.precipitation} mm`
+                    : ""}
+                </p>
+              </>
+            ) : geoStatus === "denied" ? (
+              <div>
+                <p className="text-sm text-foreground/80">Location blocked.</p>
+                <button onClick={requestLocation} className="text-xs text-primary font-semibold underline mt-0.5">
+                  Allow location access
+                </button>
+              </div>
+            ) : geoStatus === "error" ? (
+              <p className="text-sm text-destructive">Couldn't load weather. <button onClick={requestLocation} className="underline font-semibold">Retry</button></p>
+            ) : (
+              <p className="text-sm text-muted-foreground">Detecting your location…</p>
+            )}
+          </div>
+        </div>
+
+        {weather?.daily?.time && (
+          <div className="mt-3 grid grid-cols-5 gap-1.5">
+            {weather.daily.time.slice(0, 5).map((d: string, i: number) => (
+              <div key={d} className="rounded-xl bg-card/60 p-2 text-center border border-border/40">
+                <p className="text-[10px] text-muted-foreground font-semibold">
+                  {i === 0 ? "Today" : new Date(d).toLocaleDateString(undefined, { weekday: "short" })}
+                </p>
+                <p className="text-sm font-bold mt-0.5">
+                  {Math.round(weather.daily.temperature_2m_max[i])}°
+                  <span className="text-muted-foreground font-medium">/{Math.round(weather.daily.temperature_2m_min[i])}°</span>
+                </p>
+                {weather.daily.precipitation_sum?.[i] > 0 && (
+                  <p className="text-[10px] text-primary font-bold mt-0.5">{Math.round(weather.daily.precipitation_sum[i])}mm</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {alerts.length > 0 && (
+        <section className="mt-3 space-y-2">
+          {alerts.map((a, i) => (
+            <div
+              key={`${a.type}-${i}`}
+              className={`flex items-start gap-2.5 rounded-2xl border p-3 animate-fade-up ${severityClass(a.severity)}`}
+            >
+              <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-sm font-bold leading-tight">{a.title}</p>
+                <p className="text-[11px] leading-snug mt-0.5 text-foreground/80">{a.message}</p>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
 
       <section className="mt-5">
         <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-1 mb-2.5">

@@ -5,9 +5,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Camera, Upload, Loader2, Sparkles, FlaskConical, Home, Shield, AlertCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Camera, Upload, Loader2, Sparkles, FlaskConical, Home, Shield, AlertCircle, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { diagnoseCrop } from "@/server/diagnose.functions";
+import { customRemedy } from "@/server/remedy.functions";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
@@ -211,6 +213,7 @@ function DiagnosePage() {
             tone="sun"
             text={result.home_remedy}
           />
+          <CustomRemedyBox disease={result.disease} crop={crop} lang={(i18n.language as "en" | "om" | "am") ?? "en"} />
           <ResultBlock
             icon={<Shield className="h-4 w-4" />}
             label="Prevention"
@@ -222,6 +225,68 @@ function DiagnosePage() {
     </AppShell>
   );
 }
+
+function CustomRemedyBox({ disease, crop, lang }: { disease: string; crop: string; lang: "en" | "om" | "am" }) {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [remedy, setRemedy] = useState<string | null>(null);
+
+  async function ask() {
+    if (!items.trim()) return toast.error("List what you have at home first");
+    setLoading(true);
+    setRemedy(null);
+    try {
+      const r = await customRemedy({ data: { disease, crop, available: items.trim(), lang } });
+      if (!r.ok) return toast.error(r.error);
+      setRemedy(r.remedy);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 p-3 rounded-2xl bg-accent/40 border border-border/50">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-2 text-left"
+      >
+        <Wand2 className="h-4 w-4 text-primary" />
+        <span className="text-sm font-bold">Don't have those materials? Build a custom remedy</span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Tell the AI what you have at home (e.g. "garlic, soap, ash, vinegar, water"). It will mix a recipe using only those.
+          </p>
+          <Textarea
+            rows={3}
+            value={items}
+            onChange={(e) => setItems(e.target.value)}
+            placeholder="garlic, onion, soap, wood ash, baking soda, vinegar, neem leaves…"
+          />
+          <Button
+            onClick={ask}
+            disabled={loading || !items.trim()}
+            className="w-full rounded-full gradient-primary text-primary-foreground border-0 h-10"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Sparkles className="h-4 w-4 mr-1.5" /> Mix me a remedy</>}
+          </Button>
+          {remedy && (
+            <div className="mt-2 p-3 rounded-xl bg-card border border-border/60 animate-fade-in">
+              <p className="text-[11px] uppercase tracking-wider font-bold text-muted-foreground mb-1">Your custom recipe</p>
+              <p className="text-sm leading-relaxed whitespace-pre-line">{remedy}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 function ResultBlock({
   icon, label, text, tone,
