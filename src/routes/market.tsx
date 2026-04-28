@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, MapPin, Tag, Phone, Loader2, ShoppingBag, Sprout } from "lucide-react";
+import { Plus, MapPin, Tag, Phone, Loader2, ShoppingBag, Sprout, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -39,17 +39,24 @@ type Listing = {
   created_at: string;
 };
 
+type FormState = {
+  title: string; description: string; category: string;
+  price: string; unit: string; quantity: string;
+  location: string; contact: string;
+};
+
+const emptyForm: FormState = { title: "", description: "", category: "", price: "", unit: "kg", quantity: "", location: "", contact: "" };
+
 function MarketPage() {
   const { user } = useAuth();
   const [tab, setTab] = useState<"sell" | "supply">("sell");
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Listing | null>(null);
 
   async function load() {
     setLoading(true);
-    // Authenticated users see full listings (with contact). Anonymous users get the
-    // public view that hides contact details for privacy.
     const source = user ? "listings" : ("listings_public" as const);
     const { data, error } = await supabase
       .from(source as any)
@@ -60,9 +67,15 @@ function MarketPage() {
     setListings(((data ?? []) as unknown) as Listing[]);
     setLoading(false);
   }
-  useEffect(() => {
+  useEffect(() => { load(); }, [tab, user]);
+
+  async function deleteListing(l: Listing) {
+    if (!confirm(`Delete "${l.title}"?`)) return;
+    const { error } = await supabase.from("listings").delete().eq("id", l.id);
+    if (error) return toast.error(error.message);
+    toast.success("Listing deleted");
     load();
-  }, [tab, user]);
+  }
 
   return (
     <AppShell title="Marketplace" subtitle="Buy, sell, connect">
@@ -76,12 +89,13 @@ function MarketPage() {
               <Sprout className="h-3.5 w-3.5 mr-1.5" /> Supplies
             </TabsTrigger>
           </TabsList>
-          <NewListingDialog
+          <ListingDialog
+            mode="create"
             type={tab}
             open={open}
             setOpen={setOpen}
             user={user}
-            onCreated={load}
+            onSaved={load}
           />
         </div>
 
@@ -94,66 +108,104 @@ function MarketPage() {
               <p className="text-xs text-muted-foreground mt-1">Tap + to be the first.</p>
             </Card>
           ) : (
-            listings.map((l, i) => (
-              <Card
-                key={l.id}
-                className="p-4 border-0 shadow-soft hover:shadow-glow transition-all animate-fade-up"
-                style={{ animationDelay: `${i * 40}ms` }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-bold text-base leading-tight">{l.title}</h3>
-                    {l.category && (
-                      <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        <Tag className="h-3 w-3" /> {l.category}
-                      </span>
-                    )}
-                    {l.description && <p className="text-sm text-foreground/80 mt-1.5 line-clamp-2">{l.description}</p>}
-                    <div className="flex flex-wrap gap-3 mt-2.5 text-xs text-muted-foreground">
-                      {l.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{l.location}</span>}
-                      {l.contact && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{l.contact}</span>}
+            listings.map((l, i) => {
+              const mine = user && l.user_id === user.id;
+              return (
+                <Card
+                  key={l.id}
+                  className="p-4 border-0 shadow-soft hover:shadow-glow transition-all animate-fade-up"
+                  style={{ animationDelay: `${i * 40}ms` }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-bold text-base leading-tight">{l.title}</h3>
+                      {l.category && (
+                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          <Tag className="h-3 w-3" /> {l.category}
+                        </span>
+                      )}
+                      {l.description && <p className="text-sm text-foreground/80 mt-1.5 line-clamp-2">{l.description}</p>}
+                      <div className="flex flex-wrap gap-3 mt-2.5 text-xs text-muted-foreground">
+                        {l.location && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{l.location}</span>}
+                        {l.contact && <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{l.contact}</span>}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-xl font-extrabold gradient-primary bg-clip-text text-transparent">
+                        {Number(l.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-xs font-bold">Birr</span>
+                      </p>
+                      {l.unit && <p className="text-[10px] text-muted-foreground uppercase font-bold">per {l.unit}</p>}
+                      {l.quantity != null && <p className="text-[10px] text-muted-foreground mt-1">{l.quantity} avail.</p>}
                     </div>
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xl font-extrabold gradient-primary bg-clip-text text-transparent">
-                      {Number(l.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} <span className="text-xs font-bold">Birr</span>
-                    </p>
-                    {l.unit && <p className="text-[10px] text-muted-foreground uppercase font-bold">per {l.unit}</p>}
-                    {l.quantity != null && <p className="text-[10px] text-muted-foreground mt-1">{l.quantity} avail.</p>}
-                  </div>
-                </div>
-              </Card>
-            ))
+                  {mine && (
+                    <div className="flex justify-end gap-1 mt-2 pt-2 border-t border-border/60">
+                      <Button size="sm" variant="ghost" onClick={() => setEditing(l)} className="h-8">
+                        <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => deleteListing(l)} className="h-8 text-destructive">
+                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                      </Button>
+                    </div>
+                  )}
+                </Card>
+              );
+            })
           )}
         </TabsContent>
       </Tabs>
+
+      {editing && (
+        <ListingDialog
+          mode="edit"
+          type={editing.type}
+          existing={editing}
+          open={!!editing}
+          setOpen={(v) => { if (!v) setEditing(null); }}
+          user={user}
+          onSaved={() => { setEditing(null); load(); }}
+        />
+      )}
     </AppShell>
   );
 }
 
-function NewListingDialog({
-  type, open, setOpen, user, onCreated,
+function ListingDialog({
+  mode, type, open, setOpen, user, onSaved, existing,
 }: {
+  mode: "create" | "edit";
   type: "sell" | "supply";
   open: boolean;
   setOpen: (v: boolean) => void;
   user: any;
-  onCreated: () => void;
+  onSaved: () => void;
+  existing?: Listing;
 }) {
-  const [form, setForm] = useState({
-    title: "", description: "", category: "", price: "", unit: "kg", quantity: "", location: "", contact: "",
-  });
+  const [form, setForm] = useState<FormState>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (mode === "edit" && existing) {
+      setForm({
+        title: existing.title,
+        description: existing.description ?? "",
+        category: existing.category ?? "",
+        price: String(existing.price ?? ""),
+        unit: existing.unit ?? "kg",
+        quantity: existing.quantity != null ? String(existing.quantity) : "",
+        location: existing.location ?? "",
+        contact: existing.contact ?? "",
+      });
+    } else if (mode === "create") {
+      setForm(emptyForm);
+    }
+  }, [mode, existing, open]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!user) {
-      toast.error("Please sign in first");
-      return;
-    }
+    if (!user) return toast.error("Please sign in first");
     setSubmitting(true);
-    const { error } = await supabase.from("listings").insert({
-      user_id: user.id,
+    const payload = {
       type,
       title: form.title,
       description: form.description || null,
@@ -163,25 +215,31 @@ function NewListingDialog({
       quantity: form.quantity ? Number(form.quantity) : null,
       location: form.location || null,
       contact: form.contact || null,
-    });
+    };
+    const { error } = mode === "edit" && existing
+      ? await supabase.from("listings").update(payload).eq("id", existing.id)
+      : await supabase.from("listings").insert({ ...payload, user_id: user.id });
     setSubmitting(false);
     if (error) return toast.error(error.message);
-    toast.success("Listing posted!");
+    toast.success(mode === "edit" ? "Listing updated!" : "Listing posted!");
     setOpen(false);
-    setForm({ title: "", description: "", category: "", price: "", unit: "kg", quantity: "", location: "", contact: "" });
-    onCreated();
+    onSaved();
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="icon" className="h-11 w-11 rounded-full gradient-primary text-primary-foreground border-0 shadow-glow shrink-0">
-          <Plus className="h-5 w-5" />
-        </Button>
-      </DialogTrigger>
+      {mode === "create" && (
+        <DialogTrigger asChild>
+          <Button size="icon" className="h-11 w-11 rounded-full gradient-primary text-primary-foreground border-0 shadow-glow shrink-0">
+            <Plus className="h-5 w-5" />
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>New {type === "sell" ? "produce" : "supply"} listing</DialogTitle>
+          <DialogTitle>
+            {mode === "edit" ? "Edit listing" : `New ${type === "sell" ? "produce" : "supply"} listing`}
+          </DialogTitle>
         </DialogHeader>
         {!user ? (
           <p className="text-sm text-muted-foreground">
@@ -203,7 +261,7 @@ function NewListingDialog({
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
             </div>
             <Button disabled={submitting} className="w-full rounded-full gradient-primary text-primary-foreground border-0 shadow-soft h-11">
-              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Post listing"}
+              {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : (mode === "edit" ? "Save changes" : "Post listing")}
             </Button>
           </form>
         )}

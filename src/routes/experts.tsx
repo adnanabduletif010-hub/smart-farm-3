@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, MessageCircle, Loader2, Send, ChevronLeft } from "lucide-react";
+import { Plus, MessageCircle, Loader2, Send, ChevronLeft, Pencil, Trash2, X, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
@@ -22,8 +22,8 @@ export const Route = createFileRoute("/experts")({
   component: ExpertsPage,
 });
 
-type Q = { id: string; user_id: string; topic: string | null; question: string; status: string; created_at: string };
-type R = { id: string; question_id: string; user_id: string; body: string; created_at: string };
+type Q = { id: string; user_id: string | null; topic: string | null; question: string; status: string; created_at: string };
+type R = { id: string; question_id: string; user_id: string | null; body: string; created_at: string };
 
 function ExpertsPage() {
   const { user } = useAuth();
@@ -46,7 +46,30 @@ function ExpertsPage() {
     setReplies((data ?? []) as R[]);
   }
 
+  async function refreshReplies(qid: string) {
+    const { data } = await supabase.from("expert_replies").select("*").eq("question_id", qid).order("created_at");
+    setReplies((data ?? []) as R[]);
+  }
+
+  async function deleteQuestion(q: Q) {
+    if (!confirm("Delete this question and all its replies?")) return;
+    const { error } = await supabase.from("expert_questions").delete().eq("id", q.id);
+    if (error) return toast.error(error.message);
+    toast.success("Question deleted");
+    setActive(null);
+    load();
+  }
+
+  async function deleteReply(r: R) {
+    if (!confirm("Delete this reply?")) return;
+    const { error } = await supabase.from("expert_replies").delete().eq("id", r.id);
+    if (error) return toast.error(error.message);
+    toast.success("Reply deleted");
+    if (active) refreshReplies(active.id);
+  }
+
   if (active) {
+    const isOwner = user && active.user_id === user.id;
     return (
       <AppShell title="Q&A" subtitle={active.topic ?? "Discussion"}>
         <Button variant="ghost" onClick={() => setActive(null)} className="-ml-2 mb-2 rounded-full">
@@ -58,25 +81,42 @@ function ExpertsPage() {
               {active.topic}
             </span>
           )}
-          <p className="text-base font-bold leading-snug">{active.question}</p>
+          <EditableQuestion q={active} canEdit={!!isOwner} onSaved={(updated) => { setActive(updated); load(); }} />
+          {isOwner && (
+            <div className="flex justify-end mt-2">
+              <Button size="sm" variant="ghost" onClick={() => deleteQuestion(active)} className="text-destructive h-8">
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete question
+              </Button>
+            </div>
+          )}
         </Card>
 
         <div className="mt-4 space-y-2">
           {replies.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4">No replies yet — be the first.</p>
           ) : (
-            replies.map((r) => (
-              <Card key={r.id} className="p-3 border-0 shadow-soft animate-fade-up">
-                <p className="text-sm leading-relaxed">{r.body}</p>
-                <p className="text-[10px] text-muted-foreground mt-1.5">
-                  {new Date(r.created_at).toLocaleString()}
-                </p>
-              </Card>
-            ))
+            replies.map((r) => {
+              const mine = user && r.user_id === user.id;
+              return (
+                <Card key={r.id} className="p-3 border-0 shadow-soft animate-fade-up">
+                  <EditableReply r={r} canEdit={!!mine} onSaved={() => active && refreshReplies(active.id)} />
+                  <div className="flex items-center justify-between mt-1.5">
+                    <p className="text-[10px] text-muted-foreground">
+                      {new Date(r.created_at).toLocaleString()}
+                    </p>
+                    {mine && (
+                      <Button size="sm" variant="ghost" onClick={() => deleteReply(r)} className="text-destructive h-7 px-2">
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </Card>
+              );
+            })
           )}
         </div>
 
-        <ReplyBox user={user} questionId={active.id} onAdded={() => openThread(active)} />
+        <ReplyBox user={user} questionId={active.id} onAdded={() => active && refreshReplies(active.id)} />
       </AppShell>
     );
   }
@@ -118,6 +158,91 @@ function ExpertsPage() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+function EditableQuestion({ q, canEdit, onSaved }: { q: Q; canEdit: boolean; onSaved: (q: Q) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [topic, setTopic] = useState(q.topic ?? "");
+  const [text, setText] = useState(q.question);
+  const [saving, setSaving] = useState(false);
+
+  if (!editing) {
+    return (
+      <div>
+        <p className="text-base font-bold leading-snug">{q.question}</p>
+        {canEdit && (
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)} className="h-7 px-2 mt-1 -ml-2">
+            <Pencil className="h-3 w-3 mr-1" /> Edit
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Topic" />
+      <Textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} />
+      <div className="flex gap-2">
+        <Button size="sm" disabled={saving || !text.trim()} onClick={async () => {
+          setSaving(true);
+          const { data, error } = await supabase.from("expert_questions")
+            .update({ topic: topic || null, question: text.trim() })
+            .eq("id", q.id).select().single();
+          setSaving(false);
+          if (error) return toast.error(error.message);
+          toast.success("Updated");
+          setEditing(false);
+          onSaved(data as Q);
+        }}>
+          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3 mr-1" /> Save</>}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setText(q.question); setTopic(q.topic ?? ""); }}>
+          <X className="h-3 w-3 mr-1" /> Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function EditableReply({ r, canEdit, onSaved }: { r: R; canEdit: boolean; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(r.body);
+  const [saving, setSaving] = useState(false);
+
+  if (!editing) {
+    return (
+      <div>
+        <p className="text-sm leading-relaxed">{r.body}</p>
+        {canEdit && (
+          <Button size="sm" variant="ghost" onClick={() => setEditing(true)} className="h-6 px-2 mt-1 -ml-2 text-xs">
+            <Pencil className="h-3 w-3 mr-1" /> Edit
+          </Button>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      <Textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} />
+      <div className="flex gap-2">
+        <Button size="sm" disabled={saving || !text.trim()} onClick={async () => {
+          setSaving(true);
+          const { error } = await supabase.from("expert_replies").update({ body: text.trim() }).eq("id", r.id);
+          setSaving(false);
+          if (error) return toast.error(error.message);
+          toast.success("Updated");
+          setEditing(false);
+          onSaved();
+        }}>
+          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3 mr-1" /> Save</>}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setText(r.body); }}>
+          <X className="h-3 w-3 mr-1" /> Cancel
+        </Button>
+      </div>
+    </div>
   );
 }
 
