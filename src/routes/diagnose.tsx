@@ -286,15 +286,7 @@ function CustomRemedyBox({ disease, crop, lang }: { disease: string; crop: strin
     </div>
   );
 }
-            label="Prevention"
-            tone="leaf"
-            text={result.prevention}
-          />
-        </Card>
-      )}
-    </AppShell>
-  );
-}
+
 
 function ResultBlock({
   icon, label, text, tone,
