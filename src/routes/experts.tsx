@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, MessageCircle, Loader2, Send, ChevronLeft, Pencil, Trash2, X, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useAccountType } from "@/hooks/use-account-type";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/experts")({
@@ -27,6 +28,7 @@ type R = { id: string; question_id: string; user_id: string | null; body: string
 
 function ExpertsPage() {
   const { user } = useAuth();
+  const { canAnswerExperts } = useAccountType();
   const [qs, setQs] = useState<Q[]>([]);
   const [active, setActive] = useState<Q | null>(null);
   const [replies, setReplies] = useState<R[]>([]);

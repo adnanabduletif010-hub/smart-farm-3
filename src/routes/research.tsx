@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, BookOpen, ExternalLink, MessageSquare, Loader2, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useAccountType } from "@/hooks/use-account-type";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/research")({
@@ -36,6 +37,7 @@ type Comment = { id: string; post_id: string; user_id: string; body: string; cre
 
 function ResearchPage() {
   const { user } = useAuth();
+  const { canPublishResearch } = useAccountType();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -57,9 +59,16 @@ function ResearchPage() {
 
   return (
     <AppShell title="Research" subtitle="Latest publications & discussion">
-      <div className="flex justify-end mb-3">
-        <NewPostDialog open={open} setOpen={setOpen} user={user} onCreated={load} />
-      </div>
+      {canPublishResearch && (
+        <div className="flex justify-end mb-3">
+          <NewPostDialog open={open} setOpen={setOpen} user={user} onCreated={load} />
+        </div>
+      )}
+      {!canPublishResearch && (
+        <p className="text-[11px] text-muted-foreground text-center mb-3">
+          Only research centers can publish here. Anyone can read & comment.
+        </p>
+      )}
 
       {loading ? (
         <div className="py-10 text-center"><Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" /></div>
