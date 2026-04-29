@@ -6,21 +6,23 @@ import { useAccountType, type AccountType } from "@/hooks/use-account-type";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sprout, GraduationCap, FlaskConical } from "lucide-react";
 import { toast } from "sonner";
-
-const OPTIONS: { value: Exclude<AccountType, null>; title: string; desc: string; Icon: typeof Sprout }[] = [
-  { value: "farmer", title: "Farmer", desc: "Grow crops, ask experts, browse the market", Icon: Sprout },
-  { value: "expert", title: "Expert / Agronomist", desc: "Answer farmer questions, post how-to videos", Icon: GraduationCap },
-  { value: "research_center", title: "Research Center", desc: "Publish research, post videos, answer questions", Icon: FlaskConical },
-];
+import { useTranslation } from "react-i18next";
 
 export function AccountTypeGate() {
   const { user, loading: authLoading } = useAuth();
   const { accountType, loading, refresh } = useAccountType();
   const [saving, setSaving] = useState<AccountType>(null);
+  const { t } = useTranslation();
 
   if (authLoading || loading) return null;
   if (!user) return null;
   if (accountType) return null;
+
+  const options: { value: Exclude<AccountType, null>; title: string; desc: string; Icon: typeof Sprout }[] = [
+    { value: "farmer", title: t("accountType.farmer"), desc: t("accountType.farmerDesc"), Icon: Sprout },
+    { value: "expert", title: t("accountType.expert"), desc: t("accountType.expertDesc"), Icon: GraduationCap },
+    { value: "research_center", title: t("accountType.researchCenter"), desc: t("accountType.researchCenterDesc"), Icon: FlaskConical },
+  ];
 
   async function pick(value: Exclude<AccountType, null>) {
     setSaving(value);
@@ -30,7 +32,7 @@ export function AccountTypeGate() {
       .eq("user_id", user!.id);
     setSaving(null);
     if (error) return toast.error(error.message);
-    toast.success("Welcome!");
+    toast.success(t("accountType.welcome"));
     refresh();
   }
 
@@ -38,11 +40,11 @@ export function AccountTypeGate() {
     <Dialog open>
       <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
-          <DialogTitle>Tell us who you are</DialogTitle>
-          <DialogDescription>This sets what you can do in the app. You can ask an admin to change it later.</DialogDescription>
+          <DialogTitle>{t("accountType.title")}</DialogTitle>
+          <DialogDescription>{t("accountType.description")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          {OPTIONS.map(({ value, title, desc, Icon }) => (
+          {options.map(({ value, title, desc, Icon }) => (
             <Button
               key={value}
               variant="outline"
