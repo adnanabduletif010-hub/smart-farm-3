@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, User as UserIcon, History } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({ meta: [{ title: "Profile — FarmBridge" }] }),
@@ -21,6 +22,7 @@ type Diag = { id: string; crop: string | null; disease: string; created_at: stri
 
 function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<Profile>({ display_name: "", role: "farmer", location: "", bio: "", account_type: null });
   const [diags, setDiags] = useState<Diag[]>([]);
   const [saving, setSaving] = useState(false);
@@ -75,18 +77,18 @@ function ProfilePage() {
             <form onSubmit={save} className="space-y-3">
               <div className="space-y-1.5"><Label>Display name</Label><Input value={profile.display_name ?? ""} onChange={(e) => setProfile({ ...profile, display_name: e.target.value })} /></div>
               <div className="space-y-1.5">
-                <Label>Account type</Label>
+                <Label>{t("accountType.label")}</Label>
                 <select
                   className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                   value={profile.account_type ?? ""}
                   onChange={(e) => setProfile({ ...profile, account_type: e.target.value || null })}
                 >
-                  <option value="" disabled>Select…</option>
-                  <option value="farmer">Farmer</option>
-                  <option value="expert">Expert / Agronomist</option>
-                  <option value="research_center">Research Center</option>
+                  <option value="" disabled>{t("accountType.select")}</option>
+                  <option value="farmer">{t("accountType.farmer")}</option>
+                  <option value="expert">{t("accountType.expert")}</option>
+                  <option value="research_center">{t("accountType.researchCenter")}</option>
                 </select>
-                <p className="text-[11px] text-muted-foreground">Determines what you can publish (research, videos, expert answers).</p>
+                <p className="text-[11px] text-muted-foreground">{t("accountType.helper")}</p>
               </div>
               <div className="space-y-1.5">
                 <Label>Role label</Label>

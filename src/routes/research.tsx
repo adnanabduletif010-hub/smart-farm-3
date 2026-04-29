@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/research")({
   head: () => ({
@@ -38,6 +39,7 @@ type Comment = { id: string; post_id: string; user_id: string; body: string; cre
 function ResearchPage() {
   const { user } = useAuth();
   const { canPublishResearch } = useAccountType();
+  const { t } = useTranslation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -66,7 +68,7 @@ function ResearchPage() {
       )}
       {!canPublishResearch && (
         <p className="text-[11px] text-muted-foreground text-center mb-3">
-          Only research centers can publish here. Anyone can read & comment.
+          {t("accountType.onlyResearchCanPublish")}
         </p>
       )}
 

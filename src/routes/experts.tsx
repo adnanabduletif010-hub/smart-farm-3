@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/experts")({
   head: () => ({
@@ -29,6 +30,7 @@ type R = { id: string; question_id: string; user_id: string | null; body: string
 function ExpertsPage() {
   const { user } = useAuth();
   const { canAnswerExperts } = useAccountType();
+  const { t } = useTranslation();
   const [qs, setQs] = useState<Q[]>([]);
   const [active, setActive] = useState<Q | null>(null);
   const [replies, setReplies] = useState<R[]>([]);
@@ -122,7 +124,7 @@ function ExpertsPage() {
           <ReplyBox user={user} questionId={active.id} onAdded={() => active && refreshReplies(active.id)} />
         ) : (
           <p className="text-[11px] text-muted-foreground text-center mt-4">
-            Only experts & research centers can post replies.
+            {t("experts.onlyExpertsCanReply")}
           </p>
         )}
       </AppShell>
