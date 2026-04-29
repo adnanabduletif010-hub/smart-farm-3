@@ -39,6 +39,7 @@ type Comment = { id: string; post_id: string; user_id: string; body: string; cre
 function ResearchPage() {
   const { user } = useAuth();
   const { canPublishResearch } = useAccountType();
+  const { t } = useTranslation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);

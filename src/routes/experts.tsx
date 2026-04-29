@@ -30,6 +30,7 @@ type R = { id: string; question_id: string; user_id: string | null; body: string
 function ExpertsPage() {
   const { user } = useAuth();
   const { canAnswerExperts } = useAccountType();
+  const { t } = useTranslation();
   const [qs, setQs] = useState<Q[]>([]);
   const [active, setActive] = useState<Q | null>(null);
   const [replies, setReplies] = useState<R[]>([]);
