@@ -1,14 +1,14 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Leaf, ShoppingBag, BookOpen, MessageCircle, Droplets, Sprout } from "lucide-react";
+import { Home, Leaf, ShoppingBag, BookOpen, MessageCircle, Sprout, Video } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 const items = [
   { to: "/", labelKey: "nav.home", icon: Home },
   { to: "/diagnose", labelKey: "nav.diagnose", icon: Leaf },
-  { to: "/iot", labelKey: "nav.iot", icon: Droplets },
   { to: "/guides", labelKey: "nav.guides", icon: Sprout },
   { to: "/market", labelKey: "nav.market", icon: ShoppingBag },
+  { to: "/videos", labelKey: "nav.videos", icon: Video },
   { to: "/research", labelKey: "nav.research", icon: BookOpen },
   { to: "/experts", labelKey: "nav.experts", icon: MessageCircle },
 ] as const;

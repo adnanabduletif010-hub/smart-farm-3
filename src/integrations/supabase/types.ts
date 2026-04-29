@@ -285,6 +285,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_type: Database["public"]["Enums"]["account_type"] | null
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -296,6 +297,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          account_type?: Database["public"]["Enums"]["account_type"] | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -307,6 +309,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          account_type?: Database["public"]["Enums"]["account_type"] | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -459,6 +462,36 @@ export type Database = {
         }
         Relationships: []
       }
+      videos: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+          topic: string | null
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+          topic?: string | null
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+          topic?: string | null
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       listings_public: {
@@ -508,6 +541,10 @@ export type Database = {
       }
     }
     Functions: {
+      current_account_type: {
+        Args: never
+        Returns: Database["public"]["Enums"]["account_type"]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -517,6 +554,7 @@ export type Database = {
       }
     }
     Enums: {
+      account_type: "farmer" | "expert" | "research_center"
       app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
@@ -645,6 +683,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: ["farmer", "expert", "research_center"],
       app_role: ["admin", "moderator", "user"],
     },
   },

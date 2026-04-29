@@ -16,12 +16,12 @@ export const Route = createFileRoute("/profile")({
   component: ProfilePage,
 });
 
-type Profile = { display_name: string | null; role: string; location: string | null; bio: string | null };
+type Profile = { display_name: string | null; role: string; location: string | null; bio: string | null; account_type: string | null };
 type Diag = { id: string; crop: string | null; disease: string; created_at: string };
 
 function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<Profile>({ display_name: "", role: "farmer", location: "", bio: "" });
+  const [profile, setProfile] = useState<Profile>({ display_name: "", role: "farmer", location: "", bio: "", account_type: null });
   const [diags, setDiags] = useState<Diag[]>([]);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -29,7 +29,7 @@ function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("profiles").select("display_name, role, location, bio").eq("user_id", user.id).maybeSingle();
+      const { data } = await supabase.from("profiles").select("display_name, role, location, bio, account_type").eq("user_id", user.id).maybeSingle();
       if (data) setProfile(data as Profile);
       const { data: d } = await supabase.from("diagnoses").select("id, crop, disease, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
       setDiags((d ?? []) as Diag[]);
@@ -58,6 +58,7 @@ function ProfilePage() {
     setSaving(true);
     const { error } = await supabase.from("profiles").update({
       display_name: profile.display_name, role: profile.role, location: profile.location, bio: profile.bio,
+      account_type: profile.account_type as "farmer" | "expert" | "research_center" | null,
     }).eq("user_id", user!.id);
     setSaving(false);
     if (error) return toast.error(error.message);
@@ -74,7 +75,21 @@ function ProfilePage() {
             <form onSubmit={save} className="space-y-3">
               <div className="space-y-1.5"><Label>Display name</Label><Input value={profile.display_name ?? ""} onChange={(e) => setProfile({ ...profile, display_name: e.target.value })} /></div>
               <div className="space-y-1.5">
-                <Label>I am a…</Label>
+                <Label>Account type</Label>
+                <select
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={profile.account_type ?? ""}
+                  onChange={(e) => setProfile({ ...profile, account_type: e.target.value || null })}
+                >
+                  <option value="" disabled>Select…</option>
+                  <option value="farmer">Farmer</option>
+                  <option value="expert">Expert / Agronomist</option>
+                  <option value="research_center">Research Center</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground">Determines what you can publish (research, videos, expert answers).</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Role label</Label>
                 <select
                   className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
                   value={profile.role}

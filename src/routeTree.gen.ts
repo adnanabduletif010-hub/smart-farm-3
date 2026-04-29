@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VideosRouteImport } from './routes/videos'
 import { Route as ResearchRouteImport } from './routes/research'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MarketRouteImport } from './routes/market'
@@ -20,6 +21,11 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicIotIngestRouteImport } from './routes/api.public.iot.ingest'
 
+const VideosRoute = VideosRouteImport.update({
+  id: '/videos',
+  path: '/videos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResearchRoute = ResearchRouteImport.update({
   id: '/research',
   path: '/research',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
+  '/videos': typeof VideosRoute
   '/api/public/iot/ingest': typeof ApiPublicIotIngestRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
+  '/videos': typeof VideosRoute
   '/api/public/iot/ingest': typeof ApiPublicIotIngestRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
+  '/videos': typeof VideosRoute
   '/api/public/iot/ingest': typeof ApiPublicIotIngestRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/market'
     | '/profile'
     | '/research'
+    | '/videos'
     | '/api/public/iot/ingest'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/market'
     | '/profile'
     | '/research'
+    | '/videos'
     | '/api/public/iot/ingest'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/market'
     | '/profile'
     | '/research'
+    | '/videos'
     | '/api/public/iot/ingest'
   fileRoutesById: FileRoutesById
 }
@@ -157,11 +169,19 @@ export interface RootRouteChildren {
   MarketRoute: typeof MarketRoute
   ProfileRoute: typeof ProfileRoute
   ResearchRoute: typeof ResearchRoute
+  VideosRoute: typeof VideosRoute
   ApiPublicIotIngestRoute: typeof ApiPublicIotIngestRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/videos': {
+      id: '/videos'
+      path: '/videos'
+      fullPath: '/videos'
+      preLoaderRoute: typeof VideosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/research': {
       id: '/research'
       path: '/research'
@@ -245,6 +265,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketRoute: MarketRoute,
   ProfileRoute: ProfileRoute,
   ResearchRoute: ResearchRoute,
+  VideosRoute: VideosRoute,
   ApiPublicIotIngestRoute: ApiPublicIotIngestRoute,
 }
 export const routeTree = rootRouteImport

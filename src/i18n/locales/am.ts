@@ -14,6 +14,7 @@ const am: Translation = {
     research: "ምርምር",
     experts: "ባለሙያዎች",
     guides: "መመሪያዎች",
+    videos: "Videos",
     profile: "መገለጫ",
   },
   common: {
