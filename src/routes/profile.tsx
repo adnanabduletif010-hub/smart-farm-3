@@ -58,7 +58,7 @@ function ProfilePage() {
     setSaving(true);
     const { error } = await supabase.from("profiles").update({
       display_name: profile.display_name, role: profile.role, location: profile.location, bio: profile.bio,
-      account_type: profile.account_type,
+      account_type: profile.account_type as "farmer" | "expert" | "research_center" | null,
     }).eq("user_id", user!.id);
     setSaving(false);
     if (error) return toast.error(error.message);
