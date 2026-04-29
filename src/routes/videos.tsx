@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/videos")({
   head: () => ({
@@ -50,6 +51,7 @@ function getEmbed(url: string): string | null {
 function VideosPage() {
   const { user } = useAuth();
   const { canPostVideos } = useAccountType();
+  const { t } = useTranslation();
   const [vids, setVids] = useState<V[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<string | null>(null);
@@ -63,15 +65,15 @@ function VideosPage() {
   useEffect(() => { load(); }, []);
 
   async function del(v: V) {
-    if (!confirm("Delete this video?")) return;
+    if (!confirm(t("videos.confirmDelete"))) return;
     const { error } = await supabase.from("videos").delete().eq("id", v.id);
     if (error) return toast.error(error.message);
-    toast.success("Deleted");
+    toast.success(t("videos.deleted"));
     load();
   }
 
   return (
-    <AppShell title="Videos" subtitle="How-to from experts & research centers">
+    <AppShell title={t("videos.title")} subtitle={t("videos.subtitle")}>
       {canPostVideos && (
         <div className="flex justify-end mb-3">
           <NewVideoDialog user={user} onCreated={load} />
@@ -83,9 +85,9 @@ function VideosPage() {
       ) : vids.length === 0 ? (
         <Card className="p-8 text-center border-0 shadow-soft">
           <Video className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-          <p className="text-sm text-muted-foreground">No videos yet.</p>
+          <p className="text-sm text-muted-foreground">{t("videos.none")}</p>
           {!canPostVideos && (
-            <p className="text-xs text-muted-foreground mt-1">Only experts & research centers can post videos.</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("videos.onlyExpertsCanPost")}</p>
           )}
         </Card>
       ) : (
@@ -102,7 +104,7 @@ function VideosPage() {
                   </div>
                 ) : (
                   <a href={v.url} target="_blank" rel="noreferrer" className="block aspect-video w-full rounded-xl bg-muted flex items-center justify-center mb-2 text-xs text-muted-foreground">
-                    Open video link ↗
+                    {t("videos.openLink")}
                   </a>
                 )}
                 {isEditing ? (
