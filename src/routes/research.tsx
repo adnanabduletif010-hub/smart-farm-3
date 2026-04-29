@@ -68,7 +68,7 @@ function ResearchPage() {
       )}
       {!canPublishResearch && (
         <p className="text-[11px] text-muted-foreground text-center mb-3">
-          Only research centers can publish here. Anyone can read & comment.
+          {t("accountType.onlyResearchCanPublish")}
         </p>
       )}
 
