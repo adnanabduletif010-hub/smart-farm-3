@@ -118,7 +118,13 @@ function ExpertsPage() {
           )}
         </div>
 
-        <ReplyBox user={user} questionId={active.id} onAdded={() => active && refreshReplies(active.id)} />
+        {canAnswerExperts ? (
+          <ReplyBox user={user} questionId={active.id} onAdded={() => active && refreshReplies(active.id)} />
+        ) : (
+          <p className="text-[11px] text-muted-foreground text-center mt-4">
+            Only experts & research centers can post replies.
+          </p>
+        )}
       </AppShell>
     );
   }
