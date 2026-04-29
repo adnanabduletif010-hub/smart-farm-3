@@ -22,6 +22,7 @@ type Diag = { id: string; crop: string | null; disease: string; created_at: stri
 
 function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
+  const { t } = useTranslation();
   const [profile, setProfile] = useState<Profile>({ display_name: "", role: "farmer", location: "", bio: "", account_type: null });
   const [diags, setDiags] = useState<Diag[]>([]);
   const [saving, setSaving] = useState(false);
