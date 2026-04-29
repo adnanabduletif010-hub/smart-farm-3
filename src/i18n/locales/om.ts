@@ -14,6 +14,7 @@ const om: Translation = {
     research: "Qorannoo",
     experts: "Ogeessota",
     guides: "Qajeelfama",
+    videos: "Videos",
     profile: "Profaayilii",
   },
   common: {
