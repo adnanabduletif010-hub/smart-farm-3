@@ -170,6 +170,7 @@ function EditVideo({ v, onSaved, onCancel }: { v: V; onSaved: () => void; onCanc
 }
 
 function NewVideoDialog({ user, onCreated }: { user: any; onCreated: () => void }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ title: "", description: "", url: "", topic: "" });
   const [loading, setLoading] = useState(false);
@@ -177,16 +178,16 @@ function NewVideoDialog({ user, onCreated }: { user: any; onCreated: () => void 
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" className="rounded-full gradient-primary text-primary-foreground border-0 shadow-soft">
-          <Plus className="h-4 w-4 mr-1" /> Add video
+          <Plus className="h-4 w-4 mr-1" /> {t("videos.add")}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Share a how-to video</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{t("videos.shareHowTo")}</DialogTitle></DialogHeader>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (!user) return toast.error("Sign in required");
-            if (!getEmbed(form.url)) return toast.error("Please paste a valid YouTube or Vimeo link");
+            if (!user) return toast.error(t("market.signInToSell"));
+            if (!getEmbed(form.url)) return toast.error(t("videos.invalidUrl"));
             setLoading(true);
             const { error } = await supabase.from("videos").insert({
               user_id: user.id,
@@ -197,19 +198,19 @@ function NewVideoDialog({ user, onCreated }: { user: any; onCreated: () => void 
             });
             setLoading(false);
             if (error) return toast.error(error.message);
-            toast.success("Video posted!");
+            toast.success(t("videos.posted"));
             setOpen(false);
             setForm({ title: "", description: "", url: "", topic: "" });
             onCreated();
           }}
           className="space-y-3"
         >
-          <div className="space-y-1.5"><Label>Title *</Label><Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
-          <div className="space-y-1.5"><Label>YouTube or Vimeo URL *</Label><Input required type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://youtube.com/watch?v=…" /></div>
-          <div className="space-y-1.5"><Label>Topic</Label><Input value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="Irrigation, pest control…" /></div>
-          <div className="space-y-1.5"><Label>Description</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label>{t("videos.title_field")} *</Label><Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label>{t("videos.url_field")} *</Label><Input required type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://youtube.com/watch?v=…" /></div>
+          <div className="space-y-1.5"><Label>{t("videos.topic")}</Label><Input value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} /></div>
+          <div className="space-y-1.5"><Label>{t("videos.description")}</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
           <Button disabled={loading} className="w-full h-11 rounded-full gradient-primary text-primary-foreground border-0 shadow-soft">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Post video"}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("videos.post")}
           </Button>
         </form>
       </DialogContent>
