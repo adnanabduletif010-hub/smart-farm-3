@@ -11,6 +11,7 @@ const en = {
     research: "Research",
     experts: "Experts",
     guides: "Guides",
+    videos: "Videos",
     profile: "Profile",
   },
   common: {
