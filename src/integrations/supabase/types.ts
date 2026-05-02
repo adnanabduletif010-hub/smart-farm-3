@@ -545,6 +545,7 @@ export type Database = {
         Args: never
         Returns: Database["public"]["Enums"]["account_type"]
       }
+      get_listing_contact: { Args: { _listing_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
