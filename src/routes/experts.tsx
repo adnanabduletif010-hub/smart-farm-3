@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, MessageCircle, Loader2, Send, ChevronLeft, Pencil, Trash2, X, Check } from "lucide-react";
+import { Plus, MessageCircle, Loader2, Send, ChevronLeft, Pencil, Trash2, X, Check, Sparkles, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { askAIExpert } from "@/server/expert-ai.functions";
 
 export const Route = createFileRoute("/experts")({
   head: () => ({
