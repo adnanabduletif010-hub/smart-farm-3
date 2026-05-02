@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, MessageCircle, Loader2, Send, ChevronLeft, Pencil, Trash2, X, Check } from "lucide-react";
+import { Plus, MessageCircle, Loader2, Send, ChevronLeft, Pencil, Trash2, X, Check, Sparkles, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { askAIExpert } from "@/server/expert-ai.functions";
 
 export const Route = createFileRoute("/experts")({
   head: () => ({
@@ -133,7 +134,8 @@ function ExpertsPage() {
 
   return (
     <AppShell title="Experts" subtitle="Ask & discuss with agronomists">
-      <div className="flex justify-end mb-3">
+      <div className="flex justify-end gap-2 mb-3">
+        <AskAIDialog />
         <NewQuestionDialog user={user} onCreated={load} />
       </div>
 
@@ -318,6 +320,90 @@ function NewQuestionDialog({ user, onCreated }: { user: any; onCreated: () => vo
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Post question"}
             </Button>
           </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AskAIDialog() {
+  const { t, i18n } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [topic, setTopic] = useState("");
+  const [question, setQuestion] = useState("");
+  const [preview, setPreview] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [answer, setAnswer] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  function onPick(f: File | undefined | null) {
+    if (!f) return;
+    if (f.size > 8 * 1024 * 1024) return toast.error("Image too large (max 8 MB)");
+    setFile(f);
+    const reader = new FileReader();
+    reader.onload = () => setPreview(reader.result as string);
+    reader.readAsDataURL(f);
+  }
+
+  async function ask() {
+    if (!question.trim()) return;
+    setLoading(true);
+    setAnswer(null);
+    const b64 = preview ? preview.split(",")[1] : undefined;
+    const r = await askAIExpert({
+      data: {
+        question: question.trim(),
+        topic: topic || undefined,
+        imageBase64: b64,
+        mimeType: file?.type || "image/jpeg",
+        lang: (i18n.language as "en" | "om" | "am") ?? "en",
+      },
+    });
+    setLoading(false);
+    if (!r.ok) return toast.error(r.error);
+    setAnswer(r.answer);
+  }
+
+  function reset() {
+    setQuestion(""); setTopic(""); setPreview(null); setFile(null); setAnswer(null);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset(); }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="rounded-full">
+          <Sparkles className="h-4 w-4 mr-1" /> {t("experts.askAI")}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>{t("experts.askAITitle")}</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>{t("experts.topic")}</Label>
+            <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={t("experts.topicPlaceholder")} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t("experts.question")} *</Label>
+            <Textarea required rows={3} value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t("experts.questionPlaceholder")} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{t("experts.attachPhoto")}</Label>
+            <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onPick(e.target.files?.[0])} />
+            <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()} className="w-full">
+              <ImageIcon className="h-4 w-4 mr-1" /> {preview ? t("experts.changePhoto") : t("experts.choosePhoto")}
+            </Button>
+            {preview && <img src={preview} alt="preview" className="rounded-lg max-h-40 mx-auto" />}
+          </div>
+          <Button disabled={loading || !question.trim()} onClick={ask} className="w-full h-11 rounded-full gradient-primary text-primary-foreground border-0 shadow-soft">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Sparkles className="h-4 w-4 mr-1" /> {t("experts.askAI")}</>}
+          </Button>
+          {answer && (
+            <Card className="p-3 border-0 shadow-soft bg-accent/30">
+              <p className="text-[10px] uppercase tracking-wider font-bold text-primary mb-1">{t("experts.aiAnswer")}</p>
+              <p className="text-sm whitespace-pre-wrap leading-relaxed">{answer}</p>
+            </Card>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

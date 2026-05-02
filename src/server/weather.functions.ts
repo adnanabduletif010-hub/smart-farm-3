@@ -98,7 +98,7 @@ export const getWeather = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }) => {
     try {
-      const url = `https://api.open-meteo.com/v1/forecast?latitude=${data.lat}&longitude=${data.lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto&forecast_days=7`;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${data.lat}&longitude=${data.lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=auto&forecast_days=14`;
       const [wRes, place] = await Promise.all([fetch(url), reverseGeocode(data.lat, data.lon)]);
       if (!wRes.ok) return { ok: false as const, error: "weather fetch failed" };
       const j = await wRes.json();

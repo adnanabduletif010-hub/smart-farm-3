@@ -136,23 +136,42 @@ function Home() {
         </div>
 
         {weather?.daily?.time && (
-          <div className="mt-3 grid grid-cols-5 gap-1.5">
-            {weather.daily.time.slice(0, 5).map((d: string, i: number) => (
-              <div key={d} className="rounded-xl bg-card/60 p-2 text-center border border-border/40">
-                <p className="text-[10px] text-muted-foreground font-semibold">
-                  {i === 0 ? "Today" : new Date(d).toLocaleDateString(undefined, { weekday: "short" })}
-                </p>
-                <p className="text-sm font-bold mt-0.5">
-                  {Math.round(weather.daily.temperature_2m_max[i])}°
-                  <span className="text-muted-foreground font-medium">/{Math.round(weather.daily.temperature_2m_min[i])}°</span>
-                </p>
-                {weather.daily.precipitation_sum?.[i] > 0 && (
-                  <p className="text-[10px] text-primary font-bold mt-0.5">{Math.round(weather.daily.precipitation_sum[i])}mm</p>
-                )}
-              </div>
-            ))}
+          <div className="mt-3 -mx-1 overflow-x-auto pb-1">
+            <div className="flex gap-1.5 px-1 min-w-min">
+              {weather.daily.time.slice(0, 14).map((d: string, i: number) => (
+                <div key={d} className="rounded-xl bg-card/60 p-2 text-center border border-border/40 shrink-0 w-[68px]">
+                  <p className="text-[10px] text-muted-foreground font-semibold">
+                    {i === 0 ? "Today" : new Date(d).toLocaleDateString(undefined, { weekday: "short" })}
+                  </p>
+                  <p className="text-[9px] text-muted-foreground/80">
+                    {new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                  </p>
+                  <p className="text-sm font-bold mt-0.5">
+                    {Math.round(weather.daily.temperature_2m_max[i])}°
+                    <span className="text-muted-foreground font-medium">/{Math.round(weather.daily.temperature_2m_min[i])}°</span>
+                  </p>
+                  {weather.daily.precipitation_sum?.[i] > 0 && (
+                    <p className="text-[10px] text-primary font-bold mt-0.5">{Math.round(weather.daily.precipitation_sum[i])}mm</p>
+                  )}
+                  {weather.daily.precipitation_probability_max?.[i] != null && weather.daily.precipitation_probability_max[i] > 0 && (
+                    <p className="text-[9px] text-muted-foreground">{weather.daily.precipitation_probability_max[i]}%</p>
+                  )}
+                  {weather.daily.wind_speed_10m_max?.[i] != null && (
+                    <p className="text-[9px] text-muted-foreground">{Math.round(weather.daily.wind_speed_10m_max[i])}km/h</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground text-center mt-1">{t("home.forecast14")}</p>
           </div>
         )}
+
+        <button
+          onClick={requestLocation}
+          className="text-[11px] text-primary font-semibold underline mt-2"
+        >
+          {geoStatus === "ready" ? t("home.refreshLocation") : t("home.useLocation")}
+        </button>
       </Card>
 
       {alerts.length > 0 && (
