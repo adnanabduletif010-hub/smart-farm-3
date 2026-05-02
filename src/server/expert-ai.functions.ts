@@ -19,7 +19,10 @@ function getClientIp(): string {
     const req = getRequest();
     const h = req?.headers;
     if (!h) return "unknown";
-    const fwd = h.get("x-forwarded-for") || h.get("cf-connecting-ip") || h.get("x-real-ip");
+    const fwd =
+      h.get("cf-connecting-ip") ||
+      h.get("x-real-ip") ||
+      h.get("x-forwarded-for");
     if (fwd) return fwd.split(",")[0].trim();
   } catch {}
   return "unknown";
