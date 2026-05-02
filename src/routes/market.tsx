@@ -57,14 +57,28 @@ function MarketPage() {
 
   async function load() {
     setLoading(true);
-    const source = user ? "listings" : ("listings_public" as const);
+    // Always browse via the listings_public view (excludes contact column).
+    // Owners' contact is fetched lazily via the get_listing_contact RPC.
     const { data, error } = await supabase
-      .from(source as any)
+      .from("listings_public" as any)
       .select("*")
       .eq("type", tab)
       .order("created_at", { ascending: false });
     if (error) toast.error(error.message);
-    setListings(((data ?? []) as unknown) as Listing[]);
+    let rows = ((data ?? []) as unknown) as Listing[];
+    if (user) {
+      const myIds = rows.filter((r) => r.user_id === user.id).map((r) => r.id);
+      if (myIds.length) {
+        const contacts = await Promise.all(
+          myIds.map((id) =>
+            supabase.rpc("get_listing_contact", { _listing_id: id }).then((r) => ({ id, c: (r.data as string) ?? null }))
+          )
+        );
+        const map = new Map(contacts.map((x) => [x.id, x.c]));
+        rows = rows.map((r) => (map.has(r.id) ? { ...r, contact: map.get(r.id) ?? null } : r));
+      }
+    }
+    setListings(rows);
     setLoading(false);
   }
   useEffect(() => { load(); }, [tab, user]);
