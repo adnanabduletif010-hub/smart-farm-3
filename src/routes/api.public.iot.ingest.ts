@@ -85,8 +85,9 @@ export const Route = createFileRoute("/api/public/iot/ingest")({
         });
 
         if (insErr) {
+          console.error("IoT ingest insert error", insErr);
           return Response.json(
-            { ok: false, error: insErr.message },
+            { ok: false, error: "Failed to store reading" },
             { status: 500, headers: corsHeaders() },
           );
         }
