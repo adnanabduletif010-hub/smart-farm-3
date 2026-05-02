@@ -134,7 +134,8 @@ function ExpertsPage() {
 
   return (
     <AppShell title="Experts" subtitle="Ask & discuss with agronomists">
-      <div className="flex justify-end mb-3">
+      <div className="flex justify-end gap-2 mb-3">
+        <AskAIDialog />
         <NewQuestionDialog user={user} onCreated={load} />
       </div>
 
