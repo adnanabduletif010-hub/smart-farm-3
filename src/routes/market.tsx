@@ -200,16 +200,23 @@ function ListingDialog({
 
   useEffect(() => {
     if (mode === "edit" && existing) {
-      setForm({
-        title: existing.title,
-        description: existing.description ?? "",
-        category: existing.category ?? "",
-        price: String(existing.price ?? ""),
-        unit: existing.unit ?? "kg",
-        quantity: existing.quantity != null ? String(existing.quantity) : "",
-        location: existing.location ?? "",
-        contact: existing.contact ?? "",
-      });
+      (async () => {
+        let contact = existing.contact ?? "";
+        if (!contact) {
+          const { data } = await supabase.rpc("get_listing_contact", { _listing_id: existing.id });
+          contact = (data as string) ?? "";
+        }
+        setForm({
+          title: existing.title,
+          description: existing.description ?? "",
+          category: existing.category ?? "",
+          price: String(existing.price ?? ""),
+          unit: existing.unit ?? "kg",
+          quantity: existing.quantity != null ? String(existing.quantity) : "",
+          location: existing.location ?? "",
+          contact,
+        });
+      })();
     } else if (mode === "create") {
       setForm(emptyForm);
     }
