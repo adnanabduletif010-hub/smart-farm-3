@@ -172,7 +172,7 @@ function ResearchPage() {
   );
 }
 
-function CommentList({ comments }: { comments: Comment[] }) {
+function CommentList({ comments, currentUserId, onDelete }: { comments: Comment[]; currentUserId: string | null; onDelete: (c: Comment) => void }) {
   if (comments.length === 0)
     return <p className="text-xs text-muted-foreground text-center py-2">No comments yet.</p>;
   return (
