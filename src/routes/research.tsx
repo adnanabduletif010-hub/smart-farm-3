@@ -99,53 +99,73 @@ function ResearchPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {posts.map((p, i) => (
+          {posts.map((p, i) => {
+            const mine = user && p.user_id === user.id;
+            const isEditing = editingPost === p.id;
+            return (
             <Card
               key={p.id}
               className="p-4 border-0 shadow-soft animate-fade-up"
               style={{ animationDelay: `${i * 40}ms` }}
             >
-              {p.topic && (
-                <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-leaf/20 text-primary mb-2">
-                  {p.topic}
-                </span>
-              )}
-              <h3 className="font-bold text-base leading-snug">{p.title}</h3>
-              {p.summary && <p className="text-sm text-foreground/80 mt-1.5">{p.summary}</p>}
-              <div className="flex items-center justify-between mt-3 text-xs">
-                <span className="text-muted-foreground">{p.source ?? "Community"}</span>
-                <div className="flex gap-1.5">
-                  {p.url && (
-                    <a href={p.url} target="_blank" rel="noreferrer">
-                      <Button size="sm" variant="ghost" className="h-8 rounded-full text-xs">
-                        <ExternalLink className="h-3 w-3 mr-1" /> Read
-                      </Button>
-                    </a>
+              {isEditing ? (
+                <EditPost p={p} onSaved={() => { setEditingPost(null); load(); }} onCancel={() => setEditingPost(null)} />
+              ) : (
+                <>
+                  {p.topic && (
+                    <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-leaf/20 text-primary mb-2">
+                      {p.topic}
+                    </span>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 rounded-full text-xs"
-                    onClick={() => {
-                      const next = openComments === p.id ? null : p.id;
-                      setOpenComments(next);
-                      if (next) loadComments(p.id);
-                    }}
-                  >
-                    <MessageSquare className="h-3 w-3 mr-1" />
-                    {comments[p.id]?.length ?? 0} comments
-                  </Button>
-                </div>
-              </div>
+                  <h3 className="font-bold text-base leading-snug">{p.title}</h3>
+                  {p.summary && <p className="text-sm text-foreground/80 mt-1.5">{p.summary}</p>}
+                  <div className="flex items-center justify-between mt-3 text-xs">
+                    <span className="text-muted-foreground">{p.source ?? "Community"}</span>
+                    <div className="flex gap-1.5">
+                      {p.url && (
+                        <a href={p.url} target="_blank" rel="noreferrer">
+                          <Button size="sm" variant="ghost" className="h-8 rounded-full text-xs">
+                            <ExternalLink className="h-3 w-3 mr-1" /> Read
+                          </Button>
+                        </a>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 rounded-full text-xs"
+                        onClick={() => {
+                          const next = openComments === p.id ? null : p.id;
+                          setOpenComments(next);
+                          if (next) loadComments(p.id);
+                        }}
+                      >
+                        <MessageSquare className="h-3 w-3 mr-1" />
+                        {comments[p.id]?.length ?? 0} comments
+                      </Button>
+                    </div>
+                  </div>
+                  {mine && (
+                    <div className="flex justify-end gap-1 mt-2 pt-2 border-t border-border/60">
+                      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditingPost(p.id)}>
+                        <Pencil className="h-3 w-3 mr-1" /> Edit
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => deletePost(p)}>
+                        <Trash2 className="h-3 w-3 mr-1" /> Delete
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
 
               {openComments === p.id && (
                 <div className="mt-3 pt-3 border-t border-border animate-fade-in">
-                  <CommentList comments={comments[p.id] ?? []} />
+                  <CommentList comments={comments[p.id] ?? []} currentUserId={user?.id ?? null} onDelete={deleteComment} />
                   <CommentBox user={user} postId={p.id} onAdded={() => loadComments(p.id)} />
                 </div>
               )}
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </AppShell>
