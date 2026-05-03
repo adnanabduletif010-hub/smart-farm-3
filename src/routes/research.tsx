@@ -264,3 +264,34 @@ function NewPostDialog({ open, setOpen, user, onCreated }: { open: boolean; setO
     </Dialog>
   );
 }
+
+function EditPost({ p, onSaved, onCancel }: { p: Post; onSaved: () => void; onCancel: () => void }) {
+  const [form, setForm] = useState({ title: p.title, summary: p.summary ?? "", source: p.source ?? "", url: p.url ?? "", topic: p.topic ?? "" });
+  const [saving, setSaving] = useState(false);
+  return (
+    <div className="space-y-2">
+      <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Title" />
+      <Input value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="Topic" />
+      <Textarea rows={3} value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} placeholder="Summary" />
+      <Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="Source" />
+      <Input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="URL" />
+      <div className="flex gap-2">
+        <Button size="sm" disabled={saving || !form.title.trim()} onClick={async () => {
+          setSaving(true);
+          const { error } = await supabase.from("research_posts").update({
+            title: form.title.trim(),
+            summary: form.summary || null,
+            source: form.source || null,
+            url: form.url || null,
+            topic: form.topic || null,
+          }).eq("id", p.id);
+          setSaving(false);
+          if (error) return toast.error(error.message);
+          toast.success("Updated");
+          onSaved();
+        }}>{saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3 mr-1" /> Save</>}</Button>
+        <Button size="sm" variant="ghost" onClick={onCancel}><X className="h-3 w-3 mr-1" /> Cancel</Button>
+      </div>
+    </div>
+  );
+}
