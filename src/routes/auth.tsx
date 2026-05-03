@@ -220,10 +220,12 @@ function PhoneForm({ onDone }: { onDone: () => void }) {
 }
 
 function EmailForm({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [accountType, setAccountType] = useState<"farmer" | "expert" | "research_center">("farmer");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -231,7 +233,7 @@ function EmailForm({ onDone }: { onDone: () => void }) {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -240,6 +242,10 @@ function EmailForm({ onDone }: { onDone: () => void }) {
           },
         });
         if (error) throw error;
+        // Persist chosen account type on the auto-created profile.
+        if (data.user) {
+          await supabase.from("profiles").update({ account_type: accountType }).eq("user_id", data.user.id);
+        }
         toast.success("Account created! You're signed in.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
