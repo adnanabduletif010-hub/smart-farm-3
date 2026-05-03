@@ -215,6 +215,7 @@ function ListingDialog({
           quantity: existing.quantity != null ? String(existing.quantity) : "",
           location: existing.location ?? "",
           contact,
+          image_url: existing.image_url ?? "",
         });
       })();
     } else if (mode === "create") {
