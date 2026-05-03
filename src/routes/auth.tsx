@@ -220,10 +220,12 @@ function PhoneForm({ onDone }: { onDone: () => void }) {
 }
 
 function EmailForm({ onDone }: { onDone: () => void }) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [accountType, setAccountType] = useState<"farmer" | "expert" | "research_center">("farmer");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -231,7 +233,7 @@ function EmailForm({ onDone }: { onDone: () => void }) {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -240,6 +242,10 @@ function EmailForm({ onDone }: { onDone: () => void }) {
           },
         });
         if (error) throw error;
+        // Persist chosen account type on the auto-created profile.
+        if (data.user) {
+          await supabase.from("profiles").update({ account_type: accountType }).eq("user_id", data.user.id);
+        }
         toast.success("Account created! You're signed in.");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -261,6 +267,22 @@ function EmailForm({ onDone }: { onDone: () => void }) {
           <div className="space-y-1.5">
             <Label htmlFor="name">Display name</Label>
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+          </div>
+        )}
+        {mode === "signup" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="acctype">{t("accountType.label")}</Label>
+            <select
+              id="acctype"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={accountType}
+              onChange={(e) => setAccountType(e.target.value as any)}
+            >
+              <option value="farmer">{t("accountType.farmer")}</option>
+              <option value="expert">{t("accountType.expert")}</option>
+              <option value="research_center">{t("accountType.researchCenter")}</option>
+            </select>
+            <p className="text-[11px] text-muted-foreground">{t("accountType.helper")}</p>
           </div>
         )}
         <div className="space-y-1.5">

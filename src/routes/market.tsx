@@ -42,10 +42,10 @@ type Listing = {
 type FormState = {
   title: string; description: string; category: string;
   price: string; unit: string; quantity: string;
-  location: string; contact: string;
+  location: string; contact: string; image_url: string;
 };
 
-const emptyForm: FormState = { title: "", description: "", category: "", price: "", unit: "kg", quantity: "", location: "", contact: "" };
+const emptyForm: FormState = { title: "", description: "", category: "", price: "", unit: "kg", quantity: "", location: "", contact: "", image_url: "" };
 
 function MarketPage() {
   const { user } = useAuth();
@@ -130,6 +130,9 @@ function MarketPage() {
                   className="p-4 border-0 shadow-soft hover:shadow-glow transition-all animate-fade-up"
                   style={{ animationDelay: `${i * 40}ms` }}
                 >
+                  {l.image_url && (
+                    <img src={l.image_url} alt={l.title} className="w-full h-40 object-cover rounded-xl mb-3" loading="lazy" />
+                  )}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <h3 className="font-bold text-base leading-tight">{l.title}</h3>
@@ -215,6 +218,7 @@ function ListingDialog({
           quantity: existing.quantity != null ? String(existing.quantity) : "",
           location: existing.location ?? "",
           contact,
+          image_url: existing.image_url ?? "",
         });
       })();
     } else if (mode === "create") {
@@ -236,6 +240,7 @@ function ListingDialog({
       quantity: form.quantity ? Number(form.quantity) : null,
       location: form.location || null,
       contact: form.contact || null,
+      image_url: form.image_url || null,
     };
     const { error } = mode === "edit" && existing
       ? await supabase.from("listings").update(payload).eq("id", existing.id)
@@ -277,6 +282,27 @@ function ListingDialog({
             </div>
             <Field label="Location" value={form.location} onChange={(v) => setForm({ ...form, location: v })} placeholder="Town, region" />
             <Field label="Contact" value={form.contact} onChange={(v) => setForm({ ...form, contact: v })} placeholder="Phone / WhatsApp" />
+            <div className="space-y-1.5">
+              <Label>Product photo</Label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !user) return;
+                  if (file.size > 8 * 1024 * 1024) return toast.error("Image too large (max 8 MB)");
+                  const ext = file.name.split(".").pop() || "jpg";
+                  const path = `${user.id}/${Date.now()}.${ext}`;
+                  const { error: upErr } = await supabase.storage.from("listing-photos").upload(path, file, { upsert: false });
+                  if (upErr) return toast.error(upErr.message);
+                  const { data: pub } = supabase.storage.from("listing-photos").getPublicUrl(path);
+                  setForm((f) => ({ ...f, image_url: pub.publicUrl }));
+                  toast.success("Photo uploaded");
+                }}
+                className="block w-full text-sm"
+              />
+              {form.image_url && <img src={form.image_url} alt="preview" className="rounded-lg max-h-40 mt-2" />}
+            </div>
             <div className="space-y-1.5">
               <Label>Description</Label>
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />

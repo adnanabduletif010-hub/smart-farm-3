@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, BookOpen, ExternalLink, MessageSquare, Loader2, Send } from "lucide-react";
+import { Plus, BookOpen, ExternalLink, MessageSquare, Loader2, Send, Pencil, Trash2, Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/research")({
 
 type Post = {
   id: string;
+  user_id: string | null;
   title: string;
   summary: string | null;
   source: string | null;
@@ -45,6 +46,22 @@ function ResearchPage() {
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [openComments, setOpenComments] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState<string | null>(null);
+
+  async function deletePost(p: Post) {
+    if (!confirm("Delete this research post?")) return;
+    const { error } = await supabase.from("research_posts").delete().eq("id", p.id);
+    if (error) return toast.error(error.message);
+    toast.success("Deleted");
+    load();
+  }
+
+  async function deleteComment(c: Comment) {
+    if (!confirm("Delete this comment?")) return;
+    const { error } = await supabase.from("research_comments").delete().eq("id", c.id);
+    if (error) return toast.error(error.message);
+    loadComments(c.post_id);
+  }
 
   async function load() {
     setLoading(true);
@@ -82,67 +99,92 @@ function ResearchPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {posts.map((p, i) => (
+          {posts.map((p, i) => {
+            const mine = user && p.user_id === user.id;
+            const isEditing = editingPost === p.id;
+            return (
             <Card
               key={p.id}
               className="p-4 border-0 shadow-soft animate-fade-up"
               style={{ animationDelay: `${i * 40}ms` }}
             >
-              {p.topic && (
-                <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-leaf/20 text-primary mb-2">
-                  {p.topic}
-                </span>
-              )}
-              <h3 className="font-bold text-base leading-snug">{p.title}</h3>
-              {p.summary && <p className="text-sm text-foreground/80 mt-1.5">{p.summary}</p>}
-              <div className="flex items-center justify-between mt-3 text-xs">
-                <span className="text-muted-foreground">{p.source ?? "Community"}</span>
-                <div className="flex gap-1.5">
-                  {p.url && (
-                    <a href={p.url} target="_blank" rel="noreferrer">
-                      <Button size="sm" variant="ghost" className="h-8 rounded-full text-xs">
-                        <ExternalLink className="h-3 w-3 mr-1" /> Read
-                      </Button>
-                    </a>
+              {isEditing ? (
+                <EditPost p={p} onSaved={() => { setEditingPost(null); load(); }} onCancel={() => setEditingPost(null)} />
+              ) : (
+                <>
+                  {p.topic && (
+                    <span className="inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-leaf/20 text-primary mb-2">
+                      {p.topic}
+                    </span>
                   )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 rounded-full text-xs"
-                    onClick={() => {
-                      const next = openComments === p.id ? null : p.id;
-                      setOpenComments(next);
-                      if (next) loadComments(p.id);
-                    }}
-                  >
-                    <MessageSquare className="h-3 w-3 mr-1" />
-                    {comments[p.id]?.length ?? 0} comments
-                  </Button>
-                </div>
-              </div>
+                  <h3 className="font-bold text-base leading-snug">{p.title}</h3>
+                  {p.summary && <p className="text-sm text-foreground/80 mt-1.5">{p.summary}</p>}
+                  <div className="flex items-center justify-between mt-3 text-xs">
+                    <span className="text-muted-foreground">{p.source ?? "Community"}</span>
+                    <div className="flex gap-1.5">
+                      {p.url && (
+                        <a href={p.url} target="_blank" rel="noreferrer">
+                          <Button size="sm" variant="ghost" className="h-8 rounded-full text-xs">
+                            <ExternalLink className="h-3 w-3 mr-1" /> Read
+                          </Button>
+                        </a>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 rounded-full text-xs"
+                        onClick={() => {
+                          const next = openComments === p.id ? null : p.id;
+                          setOpenComments(next);
+                          if (next) loadComments(p.id);
+                        }}
+                      >
+                        <MessageSquare className="h-3 w-3 mr-1" />
+                        {comments[p.id]?.length ?? 0} comments
+                      </Button>
+                    </div>
+                  </div>
+                  {mine && (
+                    <div className="flex justify-end gap-1 mt-2 pt-2 border-t border-border/60">
+                      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setEditingPost(p.id)}>
+                        <Pencil className="h-3 w-3 mr-1" /> Edit
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => deletePost(p)}>
+                        <Trash2 className="h-3 w-3 mr-1" /> Delete
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
 
               {openComments === p.id && (
                 <div className="mt-3 pt-3 border-t border-border animate-fade-in">
-                  <CommentList comments={comments[p.id] ?? []} />
+                  <CommentList comments={comments[p.id] ?? []} currentUserId={user?.id ?? null} onDelete={deleteComment} />
                   <CommentBox user={user} postId={p.id} onAdded={() => loadComments(p.id)} />
                 </div>
               )}
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </AppShell>
   );
 }
 
-function CommentList({ comments }: { comments: Comment[] }) {
+function CommentList({ comments, currentUserId, onDelete }: { comments: Comment[]; currentUserId: string | null; onDelete: (c: Comment) => void }) {
   if (comments.length === 0)
     return <p className="text-xs text-muted-foreground text-center py-2">No comments yet.</p>;
   return (
     <div className="space-y-2 mb-2">
       {comments.map((c) => (
-        <div key={c.id} className="text-sm bg-accent/40 rounded-xl px-3 py-2">
-          {c.body}
+        <div key={c.id} className="text-sm bg-accent/40 rounded-xl px-3 py-2 flex items-start justify-between gap-2">
+          <span className="flex-1">{c.body}</span>
+          {currentUserId && c.user_id === currentUserId && (
+            <button onClick={() => onDelete(c)} className="text-destructive shrink-0" aria-label="Delete">
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
         </div>
       ))}
     </div>
@@ -220,5 +262,36 @@ function NewPostDialog({ open, setOpen, user, onCreated }: { open: boolean; setO
           </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function EditPost({ p, onSaved, onCancel }: { p: Post; onSaved: () => void; onCancel: () => void }) {
+  const [form, setForm] = useState({ title: p.title, summary: p.summary ?? "", source: p.source ?? "", url: p.url ?? "", topic: p.topic ?? "" });
+  const [saving, setSaving] = useState(false);
+  return (
+    <div className="space-y-2">
+      <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Title" />
+      <Input value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} placeholder="Topic" />
+      <Textarea rows={3} value={form.summary} onChange={(e) => setForm({ ...form, summary: e.target.value })} placeholder="Summary" />
+      <Input value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder="Source" />
+      <Input type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="URL" />
+      <div className="flex gap-2">
+        <Button size="sm" disabled={saving || !form.title.trim()} onClick={async () => {
+          setSaving(true);
+          const { error } = await supabase.from("research_posts").update({
+            title: form.title.trim(),
+            summary: form.summary || null,
+            source: form.source || null,
+            url: form.url || null,
+            topic: form.topic || null,
+          }).eq("id", p.id);
+          setSaving(false);
+          if (error) return toast.error(error.message);
+          toast.success("Updated");
+          onSaved();
+        }}>{saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3 mr-1" /> Save</>}</Button>
+        <Button size="sm" variant="ghost" onClick={onCancel}><X className="h-3 w-3 mr-1" /> Cancel</Button>
+      </div>
+    </div>
   );
 }
