@@ -269,8 +269,28 @@ function EmailForm({ onDone }: { onDone: () => void }) {
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
           </div>
         )}
-        <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
+        {mode === "signup" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="acctype">{t("accountType.label")}</Label>
+            <select
+              id="acctype"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              value={accountType}
+              onChange={(e) => setAccountType(e.target.value as any)}
+            >
+              <option value="farmer">{t("accountType.farmer")}</option>
+              <option value="expert">{t("accountType.expert")}</option>
+              <option value="research_center">{t("accountType.researchCenter")}</option>
+            </select>
+            <p className="text-[11px] text-muted-foreground">{t("accountType.helper")}</p>
+          </div>
+        )}
+        {mode === "signup" && false && (
+          <div className="hidden" />
+        )}
+        {true && (
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
           <Input
             id="email"
             type="email"
