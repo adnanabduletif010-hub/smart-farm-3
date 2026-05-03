@@ -237,6 +237,7 @@ function ListingDialog({
       quantity: form.quantity ? Number(form.quantity) : null,
       location: form.location || null,
       contact: form.contact || null,
+      image_url: form.image_url || null,
     };
     const { error } = mode === "edit" && existing
       ? await supabase.from("listings").update(payload).eq("id", existing.id)
