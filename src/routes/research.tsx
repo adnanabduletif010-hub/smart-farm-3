@@ -26,6 +26,7 @@ export const Route = createFileRoute("/research")({
 
 type Post = {
   id: string;
+  user_id: string | null;
   title: string;
   summary: string | null;
   source: string | null;
