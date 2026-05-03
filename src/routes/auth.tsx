@@ -30,16 +30,16 @@ function AuthPage() {
   async function googleSignIn() {
     setGoogleLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
       });
-      if (result.error) {
-        toast.error(result.error.message ?? "Google sign-in failed");
+      if (error) {
+        toast.error(error.message ?? "Google sign-in failed");
         setGoogleLoading(false);
-        return;
       }
-      if (result.redirected) return;
-      nav({ to: "/" });
     } catch (e: any) {
       toast.error(e?.message ?? "Google sign-in failed");
       setGoogleLoading(false);
@@ -224,6 +224,7 @@ function EmailForm({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [accountType, setAccountType] = useState<"farmer" | "expert" | "research_center">("farmer");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -236,7 +237,10 @@ function EmailForm({ onDone }: { onDone: () => void }) {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
-            data: { display_name: name || email.split("@")[0] },
+            data: { 
+              display_name: name || email.split("@")[0],
+              account_type: accountType
+            },
           },
         });
         if (error) throw error;
@@ -261,6 +265,21 @@ function EmailForm({ onDone }: { onDone: () => void }) {
           <div className="space-y-1.5">
             <Label htmlFor="name">Display name</Label>
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+          </div>
+        )}
+        {mode === "signup" && (
+          <div className="space-y-1.5">
+            <Label htmlFor="accountType">{t("accountType.label")}</Label>
+            <select
+              id="accountType"
+              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-shadow"
+              value={accountType}
+              onChange={(e) => setAccountType(e.target.value as any)}
+            >
+              <option value="farmer">{t("accountType.farmer")}</option>
+              <option value="expert">{t("accountType.expert")}</option>
+              <option value="research_center">{t("accountType.researchCenter")}</option>
+            </select>
           </div>
         )}
         <div className="space-y-1.5">

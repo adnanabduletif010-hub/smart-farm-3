@@ -12,7 +12,7 @@ import {
   Sprout, Droplets, FlaskConical, Bug, Calendar, Layers, MapPin,
   Sparkles, Loader2, ArrowLeft, Plus, Pencil, Trash2,
 } from "lucide-react";
-import { askCropGuide } from "@/server/guides.functions";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { toast } from "sonner";

@@ -34,5 +34,19 @@ export function useAccountType() {
   const canAnswerExperts = accountType === "expert" || accountType === "research_center";
   const canPostVideos = accountType === "expert" || accountType === "research_center";
 
-  return { accountType, loading, refresh, canPublishResearch, canAnswerExperts, canPostVideos };
+  const isFarmer = accountType === "farmer";
+  const isExpert = accountType === "expert";
+  const isResearch = accountType === "research_center";
+
+  return { 
+    accountType, 
+    loading, 
+    refresh, 
+    canPublishResearch, 
+    canAnswerExperts, 
+    canPostVideos,
+    isFarmer,
+    isExpert,
+    isResearch
+  };
 }

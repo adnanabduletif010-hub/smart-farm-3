@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, BookOpen, ExternalLink, MessageSquare, Loader2, Send } from "lucide-react";
+import { Plus, BookOpen, ExternalLink, MessageSquare, Loader2, Send, Pencil, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/research")({
 
 type Post = {
   id: string;
+  user_id: string;
   title: string;
   summary: string | null;
   source: string | null;
@@ -45,6 +46,7 @@ function ResearchPage() {
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [openComments, setOpenComments] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState<Post | null>(null);
 
   async function load() {
     setLoading(true);
@@ -63,7 +65,7 @@ function ResearchPage() {
     <AppShell title="Research" subtitle="Latest publications & discussion">
       {canPublishResearch && (
         <div className="flex justify-end mb-3">
-          <NewPostDialog open={open} setOpen={setOpen} user={user} onCreated={load} />
+          <NewPostDialog open={open} setOpen={setOpen} user={user} onCreated={load} existing={editingPost} onClose={() => setEditingPost(null)} />
         </div>
       )}
       {!canPublishResearch && (
@@ -118,6 +120,35 @@ function ResearchPage() {
                     <MessageSquare className="h-3 w-3 mr-1" />
                     {comments[p.id]?.length ?? 0} comments
                   </Button>
+                  {user && p.user_id === user.id && (
+                    <div className="flex gap-1 border-l border-border pl-1.5 ml-1.5">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0 rounded-full"
+                        onClick={() => {
+                          setEditingPost(p);
+                          setOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-8 w-8 p-0 rounded-full text-destructive"
+                        onClick={async () => {
+                          if (!confirm("Delete this research post?")) return;
+                          const { error } = await supabase.from("research_posts").delete().eq("id", p.id);
+                          if (error) return toast.error(error.message);
+                          toast.success("Deleted");
+                          load();
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -176,34 +207,59 @@ function CommentBox({ user, postId, onAdded }: { user: any; postId: string; onAd
   );
 }
 
-function NewPostDialog({ open, setOpen, user, onCreated }: { open: boolean; setOpen: (v: boolean) => void; user: any; onCreated: () => void }) {
+function NewPostDialog({ open, setOpen, user, onCreated, existing, onClose }: { open: boolean; setOpen: (v: boolean) => void; user: any; onCreated: () => void; existing?: Post | null; onClose?: () => void }) {
   const [form, setForm] = useState({ title: "", summary: "", source: "", url: "", topic: "" });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (existing) {
+      setForm({
+        title: existing.title,
+        summary: existing.summary || "",
+        source: existing.source || "",
+        url: existing.url || "",
+        topic: existing.topic || ""
+      });
+    } else {
+      setForm({ title: "", summary: "", source: "", url: "", topic: "" });
+    }
+  }, [existing]);
+
+  const handleClose = (v: boolean) => {
+    setOpen(v);
+    if (!v && onClose) onClose();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogTrigger asChild>
         <Button size="sm" className="rounded-full gradient-primary text-primary-foreground border-0 shadow-soft">
           <Plus className="h-4 w-4 mr-1" /> Share
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
-        <DialogHeader><DialogTitle>Share a study</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{existing ? "Edit study" : "Share a study"}</DialogTitle></DialogHeader>
           <form
             onSubmit={async (e) => {
               e.preventDefault();
               setLoading(true);
-              const { error } = await supabase.from("research_posts").insert({
+              const payload = {
                 user_id: user?.id ?? null,
                 title: form.title,
                 summary: form.summary || null,
                 source: form.source || null,
                 url: form.url || null,
                 topic: form.topic || null,
-              });
+              };
+
+              const { error } = existing 
+                ? await supabase.from("research_posts").update(payload).eq("id", existing.id)
+                : await supabase.from("research_posts").insert(payload);
+
               setLoading(false);
               if (error) return toast.error(error.message);
-              toast.success("Research shared!");
-              setOpen(false);
+              toast.success(existing ? "Updated!" : "Research shared!");
+              handleClose(false);
               setForm({ title: "", summary: "", source: "", url: "", topic: "" });
               onCreated();
             }}

@@ -9,7 +9,7 @@ import {
 import heroImg from "@/assets/farm-hero.jpg";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getWeather, type WeatherAlert } from "@/server/weather.functions";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { t } = useTranslation();
   const [weather, setWeather] = useState<any>(null);
-  const [alerts, setAlerts] = useState<WeatherAlert[]>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
   const [weatherPlace, setWeatherPlace] = useState<string>("");
   const [geoStatus, setGeoStatus] = useState<"idle" | "asking" | "denied" | "loading" | "ready" | "error">("asking");
 

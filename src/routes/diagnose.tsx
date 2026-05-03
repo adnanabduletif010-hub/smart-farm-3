@@ -8,8 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Camera, Upload, Loader2, Sparkles, FlaskConical, Home, Shield, AlertCircle, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import { diagnoseCrop } from "@/server/diagnose.functions";
-import { customRemedy } from "@/server/remedy.functions";
+
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
@@ -63,14 +62,12 @@ function DiagnosePage() {
     setResult(null);
     try {
       const b64 = (preview || "").split(",")[1];
-      const r = await diagnoseCrop({
-        data: {
-          imageBase64: b64,
-          crop,
-          mimeType: file.type || "image/jpeg",
-          lang: (i18n.language as "en" | "om" | "am") ?? "en",
-        },
+      const res = await fetch("/api/diagnose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: b64, crop, mimeType: file.type || "image/jpeg", lang: (i18n.language as "en" | "om" | "am") ?? "en" }),
       });
+      const r = await res.json();
       if (!r.ok) {
         toast.error(r.error);
         return;
@@ -237,7 +234,12 @@ function CustomRemedyBox({ disease, crop, lang }: { disease: string; crop: strin
     setLoading(true);
     setRemedy(null);
     try {
-      const r = await customRemedy({ data: { disease, crop, available: items.trim(), lang } });
+      const res = await fetch("/api/remedy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ disease, crop, available: items.trim(), lang }),
+      });
+      const r = await res.json();
       if (!r.ok) return toast.error(r.error);
       setRemedy(r.remedy);
     } catch (e: any) {

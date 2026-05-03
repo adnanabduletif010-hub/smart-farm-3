@@ -2,6 +2,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { Home, Leaf, ShoppingBag, BookOpen, MessageCircle, Sprout, Video } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { useAccountType } from "@/hooks/use-account-type";
 
 const items = [
   { to: "/", labelKey: "nav.home", icon: Home },
@@ -16,13 +17,20 @@ const items = [
 export function BottomNav() {
   const loc = useLocation();
   const { t } = useTranslation();
+  const { accountType } = useAccountType();
+
+  const filteredItems = items.filter(item => {
+    if (!("roles" in item)) return true;
+    return (item.roles as string[]).includes(accountType ?? "");
+  });
+
   return (
     <nav
       className="fixed bottom-0 inset-x-0 z-40 glass border-t border-border/60 pb-[env(safe-area-inset-bottom)]"
       aria-label="Primary"
     >
       <ul className="mx-auto max-w-2xl grid grid-cols-7">
-        {items.map(({ to, labelKey, icon: Icon }) => {
+        {filteredItems.map(({ to, labelKey, icon: Icon }) => {
           const active = to === "/" ? loc.pathname === "/" : loc.pathname.startsWith(to);
           return (
             <li key={to}>
