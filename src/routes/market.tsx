@@ -130,6 +130,9 @@ function MarketPage() {
                   className="p-4 border-0 shadow-soft hover:shadow-glow transition-all animate-fade-up"
                   style={{ animationDelay: `${i * 40}ms` }}
                 >
+                  {l.image_url && (
+                    <img src={l.image_url} alt={l.title} className="w-full h-40 object-cover rounded-xl mb-3" loading="lazy" />
+                  )}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <h3 className="font-bold text-base leading-tight">{l.title}</h3>
