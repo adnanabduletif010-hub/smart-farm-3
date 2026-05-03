@@ -285,12 +285,8 @@ function EmailForm({ onDone }: { onDone: () => void }) {
             <p className="text-[11px] text-muted-foreground">{t("accountType.helper")}</p>
           </div>
         )}
-        {mode === "signup" && false && (
-          <div className="hidden" />
-        )}
-        {true && (
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
           <Input
             id="email"
             type="email"
