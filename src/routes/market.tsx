@@ -42,10 +42,10 @@ type Listing = {
 type FormState = {
   title: string; description: string; category: string;
   price: string; unit: string; quantity: string;
-  location: string; contact: string;
+  location: string; contact: string; image_url: string;
 };
 
-const emptyForm: FormState = { title: "", description: "", category: "", price: "", unit: "kg", quantity: "", location: "", contact: "" };
+const emptyForm: FormState = { title: "", description: "", category: "", price: "", unit: "kg", quantity: "", location: "", contact: "", image_url: "" };
 
 function MarketPage() {
   const { user } = useAuth();
