@@ -280,6 +280,27 @@ function ListingDialog({
             <Field label="Location" value={form.location} onChange={(v) => setForm({ ...form, location: v })} placeholder="Town, region" />
             <Field label="Contact" value={form.contact} onChange={(v) => setForm({ ...form, contact: v })} placeholder="Phone / WhatsApp" />
             <div className="space-y-1.5">
+              <Label>Product photo</Label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file || !user) return;
+                  if (file.size > 8 * 1024 * 1024) return toast.error("Image too large (max 8 MB)");
+                  const ext = file.name.split(".").pop() || "jpg";
+                  const path = `${user.id}/${Date.now()}.${ext}`;
+                  const { error: upErr } = await supabase.storage.from("listing-photos").upload(path, file, { upsert: false });
+                  if (upErr) return toast.error(upErr.message);
+                  const { data: pub } = supabase.storage.from("listing-photos").getPublicUrl(path);
+                  setForm((f) => ({ ...f, image_url: pub.publicUrl }));
+                  toast.success("Photo uploaded");
+                }}
+                className="block w-full text-sm"
+              />
+              {form.image_url && <img src={form.image_url} alt="preview" className="rounded-lg max-h-40 mt-2" />}
+            </div>
+            <div className="space-y-1.5">
               <Label>Description</Label>
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3} />
             </div>
