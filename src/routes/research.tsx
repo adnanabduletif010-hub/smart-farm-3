@@ -46,6 +46,22 @@ function ResearchPage() {
   const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<Record<string, Comment[]>>({});
   const [openComments, setOpenComments] = useState<string | null>(null);
+  const [editingPost, setEditingPost] = useState<string | null>(null);
+
+  async function deletePost(p: Post) {
+    if (!confirm("Delete this research post?")) return;
+    const { error } = await supabase.from("research_posts").delete().eq("id", p.id);
+    if (error) return toast.error(error.message);
+    toast.success("Deleted");
+    load();
+  }
+
+  async function deleteComment(c: Comment) {
+    if (!confirm("Delete this comment?")) return;
+    const { error } = await supabase.from("research_comments").delete().eq("id", c.id);
+    if (error) return toast.error(error.message);
+    loadComments(c.post_id);
+  }
 
   async function load() {
     setLoading(true);
