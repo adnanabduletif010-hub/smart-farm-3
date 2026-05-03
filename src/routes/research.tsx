@@ -178,8 +178,13 @@ function CommentList({ comments, currentUserId, onDelete }: { comments: Comment[
   return (
     <div className="space-y-2 mb-2">
       {comments.map((c) => (
-        <div key={c.id} className="text-sm bg-accent/40 rounded-xl px-3 py-2">
-          {c.body}
+        <div key={c.id} className="text-sm bg-accent/40 rounded-xl px-3 py-2 flex items-start justify-between gap-2">
+          <span className="flex-1">{c.body}</span>
+          {currentUserId && c.user_id === currentUserId && (
+            <button onClick={() => onDelete(c)} className="text-destructive shrink-0" aria-label="Delete">
+              <Trash2 className="h-3 w-3" />
+            </button>
+          )}
         </div>
       ))}
     </div>
