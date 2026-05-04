@@ -238,7 +238,6 @@ function EmailForm({ onDone }: { onDone: () => void }) {
             emailRedirectTo: `${window.location.origin}/`,
             data: { 
               display_name: name || email.split("@")[0],
-              account_type: accountType
             },
           },
         });
@@ -266,21 +265,7 @@ function EmailForm({ onDone }: { onDone: () => void }) {
             <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
           </div>
         )}
-        {mode === "signup" && (
-          <div className="space-y-1.5">
-            <Label htmlFor="accountType">{t("accountType.label")}</Label>
-            <select
-              id="accountType"
-              className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-shadow"
-              value={accountType}
-              onChange={(e) => setAccountType(e.target.value as any)}
-            >
-              <option value="farmer">{t("accountType.farmer")}</option>
-              <option value="expert">{t("accountType.expert")}</option>
-              <option value="research_center">{t("accountType.researchCenter")}</option>
-            </select>
-          </div>
-        )}
+        {/* Account type chosen on Profile page after sign-up */}
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
           <Input
