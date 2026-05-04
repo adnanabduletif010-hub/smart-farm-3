@@ -224,7 +224,6 @@ function EmailForm({ onDone }: { onDone: () => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [accountType, setAccountType] = useState<"farmer" | "expert" | "research_center">("farmer");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: React.FormEvent) {
