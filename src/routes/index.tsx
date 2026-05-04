@@ -30,22 +30,13 @@ function Home() {
 
   async function loadFor(lat: number, lon: number) {
     setGeoStatus("loading");
-    try {
-      const res = await fetch("/api/weather", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat, lon }),
-      });
-      const r = await res.json();
-      if (r.ok) {
-        setWeather(r.data);
-        setAlerts(r.alerts ?? []);
-        setWeatherPlace(r.place ?? "Your location");
-        setGeoStatus("ready");
-      } else {
-        setGeoStatus("error");
-      }
-    } catch {
+    const r = await getWeather({ data: { lat, lon } });
+    if (r.ok) {
+      setWeather(r.data);
+      setAlerts(r.alerts ?? []);
+      setWeatherPlace(r.place ?? "Your location");
+      setGeoStatus("ready");
+    } else {
       setGeoStatus("error");
     }
   }
@@ -77,7 +68,7 @@ function Home() {
     return "Cloudy";
   };
 
-  const severityClass = (s: string) =>
+  const severityClass = (s: WeatherAlert["severity"]) =>
     s === "danger" ? "bg-destructive/15 border-destructive/40 text-destructive"
     : s === "warning" ? "bg-sun/20 border-sun/40 text-earth"
     : s === "watch" ? "bg-accent border-border text-foreground"

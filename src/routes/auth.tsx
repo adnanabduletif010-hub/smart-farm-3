@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
@@ -26,22 +26,6 @@ function AuthPage() {
   const nav = useNavigate();
   const { t } = useTranslation();
   const [googleLoading, setGoogleLoading] = useState(false);
-
-  // Redirect away from /auth if already signed in (e.g. after Google OAuth callback)
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        nav({ to: "/" });
-      }
-    });
-    // Also check immediately on mount
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) {
-        nav({ to: "/" });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [nav]);
 
   async function googleSignIn() {
     setGoogleLoading(true);
