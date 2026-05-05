@@ -1,0 +1,1 @@
+DROP TRIGGER IF EXISTS profiles_block_account_type_self_change ON public.profiles;
