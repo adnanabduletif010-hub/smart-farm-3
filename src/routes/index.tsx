@@ -9,6 +9,7 @@ import {
 import heroImg from "@/assets/farm-hero.jpg";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getWeather, type WeatherAlert } from "@/lib/api-helpers";
 
 
 export const Route = createFileRoute("/")({
