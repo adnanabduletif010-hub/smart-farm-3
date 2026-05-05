@@ -16,6 +16,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { toast } from "sonner";
+import { askCropGuide } from "@/lib/api-helpers";
 
 export const Route = createFileRoute("/guides")({
   head: () => ({
