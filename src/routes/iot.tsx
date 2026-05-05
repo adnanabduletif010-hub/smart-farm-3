@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { getSoilAdvice } from "@/lib/api-helpers";
 
 import {
   ResponsiveContainer,
