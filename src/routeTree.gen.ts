@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VideosRouteImport } from './routes/videos'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResearchRouteImport } from './routes/research'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MarketRouteImport } from './routes/market'
@@ -24,6 +25,11 @@ import { Route as ApiPublicIotIngestRouteImport } from './routes/api.public.iot.
 const VideosRoute = VideosRouteImport.update({
   id: '/videos',
   path: '/videos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResearchRoute = ResearchRouteImport.update({
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/videos': typeof VideosRoute
   '/api/public/iot/ingest': typeof ApiPublicIotIngestRoute
 }
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/videos': typeof VideosRoute
   '/api/public/iot/ingest': typeof ApiPublicIotIngestRoute
 }
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/videos': typeof VideosRoute
   '/api/public/iot/ingest': typeof ApiPublicIotIngestRoute
 }
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/market'
     | '/profile'
     | '/research'
+    | '/reset-password'
     | '/videos'
     | '/api/public/iot/ingest'
   fileRoutesByTo: FileRoutesByTo
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/market'
     | '/profile'
     | '/research'
+    | '/reset-password'
     | '/videos'
     | '/api/public/iot/ingest'
   id:
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/market'
     | '/profile'
     | '/research'
+    | '/reset-password'
     | '/videos'
     | '/api/public/iot/ingest'
   fileRoutesById: FileRoutesById
@@ -169,6 +181,7 @@ export interface RootRouteChildren {
   MarketRoute: typeof MarketRoute
   ProfileRoute: typeof ProfileRoute
   ResearchRoute: typeof ResearchRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   VideosRoute: typeof VideosRoute
   ApiPublicIotIngestRoute: typeof ApiPublicIotIngestRoute
 }
@@ -180,6 +193,13 @@ declare module '@tanstack/react-router' {
       path: '/videos'
       fullPath: '/videos'
       preLoaderRoute: typeof VideosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/research': {
@@ -265,6 +285,7 @@ const rootRouteChildren: RootRouteChildren = {
   MarketRoute: MarketRoute,
   ProfileRoute: ProfileRoute,
   ResearchRoute: ResearchRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   VideosRoute: VideosRoute,
   ApiPublicIotIngestRoute: ApiPublicIotIngestRoute,
 }
