@@ -10,6 +10,7 @@ import heroImg from "@/assets/farm-hero.jpg";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getWeather, type WeatherAlert } from "@/lib/api-helpers";
+import { useAuth } from "@/hooks/use-auth";
 
 
 export const Route = createFileRoute("/")({
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const { user } = useAuth();
   const { t } = useTranslation();
   const [weather, setWeather] = useState<any>(null);
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -96,6 +98,11 @@ function Home() {
           <h1 className="text-2xl font-extrabold tracking-tight leading-tight whitespace-pre-line">
             {t("home.heroTitle")}
           </h1>
+          {!user && (
+            <Link to="/auth" className="inline-flex items-center gap-2 mt-4 px-5 py-2 rounded-full gradient-primary text-primary-foreground text-sm font-bold shadow-glow animate-bounce-in">
+              {t("common.signIn")} to Get Started <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       </section>
 

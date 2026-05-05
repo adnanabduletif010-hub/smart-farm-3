@@ -14,6 +14,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResearchRouteImport } from './routes/research'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as MarketRouteImport } from './routes/market'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IotRouteImport } from './routes/iot'
 import { Route as GuidesRouteImport } from './routes/guides'
 import { Route as ExpertsRouteImport } from './routes/experts'
@@ -45,6 +46,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const MarketRoute = MarketRouteImport.update({
   id: '/market',
   path: '/market',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IotRoute = IotRouteImport.update({
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/experts': typeof ExpertsRoute
   '/guides': typeof GuidesRoute
   '/iot': typeof IotRoute
+  '/login': typeof LoginRoute
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/experts': typeof ExpertsRoute
   '/guides': typeof GuidesRoute
   '/iot': typeof IotRoute
+  '/login': typeof LoginRoute
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/experts': typeof ExpertsRoute
   '/guides': typeof GuidesRoute
   '/iot': typeof IotRoute
+  '/login': typeof LoginRoute
   '/market': typeof MarketRoute
   '/profile': typeof ProfileRoute
   '/research': typeof ResearchRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/experts'
     | '/guides'
     | '/iot'
+    | '/login'
     | '/market'
     | '/profile'
     | '/research'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/experts'
     | '/guides'
     | '/iot'
+    | '/login'
     | '/market'
     | '/profile'
     | '/research'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/experts'
     | '/guides'
     | '/iot'
+    | '/login'
     | '/market'
     | '/profile'
     | '/research'
@@ -178,6 +190,7 @@ export interface RootRouteChildren {
   ExpertsRoute: typeof ExpertsRoute
   GuidesRoute: typeof GuidesRoute
   IotRoute: typeof IotRoute
+  LoginRoute: typeof LoginRoute
   MarketRoute: typeof MarketRoute
   ProfileRoute: typeof ProfileRoute
   ResearchRoute: typeof ResearchRoute
@@ -221,6 +234,13 @@ declare module '@tanstack/react-router' {
       path: '/market'
       fullPath: '/market'
       preLoaderRoute: typeof MarketRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/iot': {
@@ -282,6 +302,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExpertsRoute: ExpertsRoute,
   GuidesRoute: GuidesRoute,
   IotRoute: IotRoute,
+  LoginRoute: LoginRoute,
   MarketRoute: MarketRoute,
   ProfileRoute: ProfileRoute,
   ResearchRoute: ResearchRoute,

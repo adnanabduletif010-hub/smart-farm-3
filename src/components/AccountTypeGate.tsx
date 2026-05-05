@@ -1,15 +1,16 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
-import { useAccountType, type AccountType } from "@/hooks/use-account-type";
+import { useAccountType } from "@/hooks/use-account-type";
+import type { AccountType } from "@/components/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sprout, GraduationCap, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
 export function AccountTypeGate() {
-  const { user, loading: authLoading } = useAuth();
-  const { accountType, loading, refresh } = useAccountType();
+  const { user, loading: authLoading, refreshProfile } = useAuth();
+  const { accountType, loading } = useAccountType();
   const [saving, setSaving] = useState<AccountType>(null);
   const { t } = useTranslation();
 
@@ -29,7 +30,7 @@ export function AccountTypeGate() {
       setSaving(null);
     } else {
       toast.success(t("accountType.welcome"));
-      refresh();
+      refreshProfile();
       setSaving(null);
     }
   }
