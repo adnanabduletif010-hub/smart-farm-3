@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, User as UserIcon, History } from "lucide-react";
+import { Loader2, User as UserIcon, History, MapPin } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/profile")({
