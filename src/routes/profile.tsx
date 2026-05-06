@@ -102,7 +102,42 @@ function ProfilePage() {
                   <option value="buyer">Buyer</option>
                 </select>
               </div>
-              <div className="space-y-1.5"><Label>Location</Label><Input value={profile.location ?? ""} onChange={(e) => setProfile({ ...profile, location: e.target.value })} placeholder="Town, region" /></div>
+              <div className="space-y-1.5">
+                <Label>Location</Label>
+                <div className="flex gap-2">
+                  <Input value={profile.location ?? ""} onChange={(e) => setProfile({ ...profile, location: e.target.value })} placeholder="Town, region" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => {
+                      if (!navigator.geolocation) return toast.error("Geolocation not supported");
+                      toast.loading("Detecting location…", { id: "geo" });
+                      navigator.geolocation.getCurrentPosition(
+                        async (pos) => {
+                          const { latitude, longitude } = pos.coords;
+                          try {
+                            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10`);
+                            const j = await res.json();
+                            const a = j.address ?? {};
+                            const place = [a.city || a.town || a.village || a.county, a.state, a.country].filter(Boolean).join(", ") || `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`;
+                            setProfile((p) => ({ ...p, location: place }));
+                            toast.success("Location detected", { id: "geo" });
+                          } catch {
+                            setProfile((p) => ({ ...p, location: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}` }));
+                            toast.success("Coordinates set", { id: "geo" });
+                          }
+                        },
+                        (err) => toast.error(err.message || "Location denied", { id: "geo" }),
+                        { enableHighAccuracy: true, timeout: 10000 }
+                      );
+                    }}
+                  >
+                    <MapPin className="h-4 w-4 mr-1" /> Detect
+                  </Button>
+                </div>
+              </div>
               <div className="space-y-1.5"><Label>Bio</Label><Textarea rows={3} value={profile.bio ?? ""} onChange={(e) => setProfile({ ...profile, bio: e.target.value })} /></div>
               <Button disabled={saving} className="w-full h-11 rounded-full gradient-primary text-primary-foreground border-0 shadow-soft">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save profile"}
