@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 
+export type AccountType = "farmer" | "expert" | "research_center" | null;
+
 export type Profile = {
   display_name: string | null;
   role: string;
