@@ -78,6 +78,44 @@ function VideosPage() {
   }
   useEffect(() => { load(); }, [user?.id]);
 
+  // Realtime: keep like counts and my-like state fresh across tabs/devices
+  useEffect(() => {
+    const channel = supabase
+      .channel("video_likes_feed")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "video_likes" },
+        (payload: any) => {
+          const row = (payload.new ?? payload.old) as { video_id: string; user_id: string };
+          if (!row?.video_id) return;
+          setLikes((prev) => {
+            const cur = prev[row.video_id] ?? { count: 0, mine: false };
+            if (payload.eventType === "INSERT") {
+              return {
+                ...prev,
+                [row.video_id]: {
+                  count: cur.count + 1,
+                  mine: user && row.user_id === user.id ? true : cur.mine,
+                },
+              };
+            }
+            if (payload.eventType === "DELETE") {
+              return {
+                ...prev,
+                [row.video_id]: {
+                  count: Math.max(0, cur.count - 1),
+                  mine: user && row.user_id === user.id ? false : cur.mine,
+                },
+              };
+            }
+            return prev;
+          });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
+
   async function del(v: V) {
     if (!confirm(t("videos.confirmDelete"))) return;
     const { error } = await supabase.from("videos").delete().eq("id", v.id);
