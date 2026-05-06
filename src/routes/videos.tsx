@@ -195,7 +195,7 @@ function Comments({ videoId, user }: { videoId: string; user: any }) {
   async function load() {
     setLoading(true);
     const { data } = await supabase.from("video_comments" as any).select("*").eq("video_id", videoId).order("created_at", { ascending: true });
-    setItems((data ?? []) as Comment[]);
+    setItems((data ?? []) as unknown as Comment[]);
     setLoading(false);
   }
   useEffect(() => { load(); }, [videoId]);
