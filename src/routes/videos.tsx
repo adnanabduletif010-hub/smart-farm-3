@@ -55,28 +55,28 @@ function VideosPage() {
   const { t } = useTranslation();
   const [vids, setVids] = useState<V[]>([]);
   const [loading, setLoading] = useState(true);
-  const [likes, setLikes] = useState<Record<string, { count: number; mine: boolean }>>({});
+  const [likes, setLikes] = useState<Record<string, { count: number; likers: Set<string> }>>({});
   const [openComments, setOpenComments] = useState<string | null>(null);
 
   async function load() {
-    setLoading(true);
     const { data } = await supabase.from("videos").select("*").order("created_at", { ascending: false });
     const list = (data ?? []) as V[];
     setVids(list);
+    setLoading(false);
     if (list.length) {
       const ids = list.map((v) => v.id);
       const { data: likeRows } = await supabase.from("video_likes" as any).select("video_id, user_id").in("video_id", ids);
-      const map: Record<string, { count: number; mine: boolean }> = {};
-      ids.forEach((id) => (map[id] = { count: 0, mine: false }));
+      const map: Record<string, { count: number; likers: Set<string> }> = {};
+      ids.forEach((id) => (map[id] = { count: 0, likers: new Set() }));
       (likeRows ?? []).forEach((r: any) => {
         map[r.video_id].count++;
-        if (user && r.user_id === user.id) map[r.video_id].mine = true;
+        map[r.video_id].likers.add(r.user_id);
       });
       setLikes(map);
     }
-    setLoading(false);
   }
-  useEffect(() => { load(); }, [user?.id]);
+  // Load videos once on mount — do NOT gate on auth, so the page renders fast
+  useEffect(() => { load(); }, []);
 
   // Realtime: keep like counts and my-like state fresh across tabs/devices
   useEffect(() => {
@@ -89,24 +89,15 @@ function VideosPage() {
           const row = (payload.new ?? payload.old) as { video_id: string; user_id: string };
           if (!row?.video_id) return;
           setLikes((prev) => {
-            const cur = prev[row.video_id] ?? { count: 0, mine: false };
+            const cur = prev[row.video_id] ?? { count: 0, likers: new Set<string>() };
+            const likers = new Set(cur.likers);
             if (payload.eventType === "INSERT") {
-              return {
-                ...prev,
-                [row.video_id]: {
-                  count: cur.count + 1,
-                  mine: user && row.user_id === user.id ? true : cur.mine,
-                },
-              };
+              likers.add(row.user_id);
+              return { ...prev, [row.video_id]: { count: cur.count + 1, likers } };
             }
             if (payload.eventType === "DELETE") {
-              return {
-                ...prev,
-                [row.video_id]: {
-                  count: Math.max(0, cur.count - 1),
-                  mine: user && row.user_id === user.id ? false : cur.mine,
-                },
-              };
+              likers.delete(row.user_id);
+              return { ...prev, [row.video_id]: { count: Math.max(0, cur.count - 1), likers } };
             }
             return prev;
           });
@@ -114,7 +105,7 @@ function VideosPage() {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id]);
+  }, []);
 
   async function del(v: V) {
     if (!confirm(t("videos.confirmDelete"))) return;
@@ -126,15 +117,18 @@ function VideosPage() {
 
   async function toggleLike(v: V) {
     if (!user) return toast.error("Sign in to like");
-    const cur = likes[v.id];
-    if (cur?.mine) {
+    const cur = likes[v.id] ?? { count: 0, likers: new Set<string>() };
+    const mine = cur.likers.has(user.id);
+    if (mine) {
+      const likers = new Set(cur.likers); likers.delete(user.id);
+      setLikes({ ...likes, [v.id]: { count: Math.max(0, cur.count - 1), likers } });
       const { error } = await supabase.from("video_likes" as any).delete().eq("video_id", v.id).eq("user_id", user.id);
-      if (error) return toast.error(error.message);
-      setLikes({ ...likes, [v.id]: { count: cur.count - 1, mine: false } });
+      if (error) { toast.error(error.message); load(); }
     } else {
+      const likers = new Set(cur.likers); likers.add(user.id);
+      setLikes({ ...likes, [v.id]: { count: cur.count + 1, likers } });
       const { error } = await supabase.from("video_likes" as any).insert({ video_id: v.id, user_id: user.id });
-      if (error) return toast.error(error.message);
-      setLikes({ ...likes, [v.id]: { count: (cur?.count ?? 0) + 1, mine: true } });
+      if (error) { toast.error(error.message); load(); }
     }
   }
 
@@ -171,7 +165,8 @@ function VideosPage() {
             const mine = user && v.user_id === user.id;
             const embed = getEmbed(v.url);
             const direct = isDirectVideo(v.url);
-            const like = likes[v.id] ?? { count: 0, mine: false };
+            const like = likes[v.id] ?? { count: 0, likers: new Set<string>() };
+            const mineLike = !!user && like.likers.has(user.id);
             return (
               <Card key={v.id} className="p-3 border-0 shadow-soft animate-fade-up overflow-hidden" style={{ animationDelay: `${i * 30}ms` }}>
                 {direct ? (
@@ -193,7 +188,7 @@ function VideosPage() {
 
                 <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50">
                   <Button size="sm" variant="ghost" className="h-8 px-2 gap-1" onClick={() => toggleLike(v)}>
-                    <Heart className={`h-4 w-4 ${like.mine ? "fill-destructive text-destructive" : ""}`} />
+                    <Heart className={`h-4 w-4 ${mineLike ? "fill-destructive text-destructive" : ""}`} />
                     <span className="text-xs">{like.count}</span>
                   </Button>
                   <Button size="sm" variant="ghost" className="h-8 px-2 gap-1" onClick={() => setOpenComments(openComments === v.id ? null : v.id)}>
