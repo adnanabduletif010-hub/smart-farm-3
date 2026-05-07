@@ -89,24 +89,15 @@ function VideosPage() {
           const row = (payload.new ?? payload.old) as { video_id: string; user_id: string };
           if (!row?.video_id) return;
           setLikes((prev) => {
-            const cur = prev[row.video_id] ?? { count: 0, mine: false };
+            const cur = prev[row.video_id] ?? { count: 0, likers: new Set<string>() };
+            const likers = new Set(cur.likers);
             if (payload.eventType === "INSERT") {
-              return {
-                ...prev,
-                [row.video_id]: {
-                  count: cur.count + 1,
-                  mine: user && row.user_id === user.id ? true : cur.mine,
-                },
-              };
+              likers.add(row.user_id);
+              return { ...prev, [row.video_id]: { count: cur.count + 1, likers } };
             }
             if (payload.eventType === "DELETE") {
-              return {
-                ...prev,
-                [row.video_id]: {
-                  count: Math.max(0, cur.count - 1),
-                  mine: user && row.user_id === user.id ? false : cur.mine,
-                },
-              };
+              likers.delete(row.user_id);
+              return { ...prev, [row.video_id]: { count: Math.max(0, cur.count - 1), likers } };
             }
             return prev;
           });
@@ -114,7 +105,7 @@ function VideosPage() {
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id]);
+  }, []);
 
   async function del(v: V) {
     if (!confirm(t("videos.confirmDelete"))) return;
@@ -126,15 +117,18 @@ function VideosPage() {
 
   async function toggleLike(v: V) {
     if (!user) return toast.error("Sign in to like");
-    const cur = likes[v.id];
-    if (cur?.mine) {
+    const cur = likes[v.id] ?? { count: 0, likers: new Set<string>() };
+    const mine = cur.likers.has(user.id);
+    if (mine) {
+      const likers = new Set(cur.likers); likers.delete(user.id);
+      setLikes({ ...likes, [v.id]: { count: Math.max(0, cur.count - 1), likers } });
       const { error } = await supabase.from("video_likes" as any).delete().eq("video_id", v.id).eq("user_id", user.id);
-      if (error) return toast.error(error.message);
-      setLikes({ ...likes, [v.id]: { count: cur.count - 1, mine: false } });
+      if (error) { toast.error(error.message); load(); }
     } else {
+      const likers = new Set(cur.likers); likers.add(user.id);
+      setLikes({ ...likes, [v.id]: { count: cur.count + 1, likers } });
       const { error } = await supabase.from("video_likes" as any).insert({ video_id: v.id, user_id: user.id });
-      if (error) return toast.error(error.message);
-      setLikes({ ...likes, [v.id]: { count: (cur?.count ?? 0) + 1, mine: true } });
+      if (error) { toast.error(error.message); load(); }
     }
   }
 
