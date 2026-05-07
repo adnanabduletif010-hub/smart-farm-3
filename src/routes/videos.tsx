@@ -55,28 +55,28 @@ function VideosPage() {
   const { t } = useTranslation();
   const [vids, setVids] = useState<V[]>([]);
   const [loading, setLoading] = useState(true);
-  const [likes, setLikes] = useState<Record<string, { count: number; mine: boolean }>>({});
+  const [likes, setLikes] = useState<Record<string, { count: number; likers: Set<string> }>>({});
   const [openComments, setOpenComments] = useState<string | null>(null);
 
   async function load() {
-    setLoading(true);
     const { data } = await supabase.from("videos").select("*").order("created_at", { ascending: false });
     const list = (data ?? []) as V[];
     setVids(list);
+    setLoading(false);
     if (list.length) {
       const ids = list.map((v) => v.id);
       const { data: likeRows } = await supabase.from("video_likes" as any).select("video_id, user_id").in("video_id", ids);
-      const map: Record<string, { count: number; mine: boolean }> = {};
-      ids.forEach((id) => (map[id] = { count: 0, mine: false }));
+      const map: Record<string, { count: number; likers: Set<string> }> = {};
+      ids.forEach((id) => (map[id] = { count: 0, likers: new Set() }));
       (likeRows ?? []).forEach((r: any) => {
         map[r.video_id].count++;
-        if (user && r.user_id === user.id) map[r.video_id].mine = true;
+        map[r.video_id].likers.add(r.user_id);
       });
       setLikes(map);
     }
-    setLoading(false);
   }
-  useEffect(() => { load(); }, [user?.id]);
+  // Load videos once on mount — do NOT gate on auth, so the page renders fast
+  useEffect(() => { load(); }, []);
 
   // Realtime: keep like counts and my-like state fresh across tabs/devices
   useEffect(() => {
