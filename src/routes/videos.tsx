@@ -165,7 +165,8 @@ function VideosPage() {
             const mine = user && v.user_id === user.id;
             const embed = getEmbed(v.url);
             const direct = isDirectVideo(v.url);
-            const like = likes[v.id] ?? { count: 0, mine: false };
+            const like = likes[v.id] ?? { count: 0, likers: new Set<string>() };
+            const mineLike = !!user && like.likers.has(user.id);
             return (
               <Card key={v.id} className="p-3 border-0 shadow-soft animate-fade-up overflow-hidden" style={{ animationDelay: `${i * 30}ms` }}>
                 {direct ? (
