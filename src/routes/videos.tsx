@@ -188,7 +188,7 @@ function VideosPage() {
 
                 <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50">
                   <Button size="sm" variant="ghost" className="h-8 px-2 gap-1" onClick={() => toggleLike(v)}>
-                    <Heart className={`h-4 w-4 ${like.mine ? "fill-destructive text-destructive" : ""}`} />
+                    <Heart className={`h-4 w-4 ${mineLike ? "fill-destructive text-destructive" : ""}`} />
                     <span className="text-xs">{like.count}</span>
                   </Button>
                   <Button size="sm" variant="ghost" className="h-8 px-2 gap-1" onClick={() => setOpenComments(openComments === v.id ? null : v.id)}>
