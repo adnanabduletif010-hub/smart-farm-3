@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, updateDoc, collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { toast } from "sonner";
 import { Loader2, User as UserIcon, History, MapPin } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -31,13 +32,27 @@ function ProfilePage() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { data } = await supabase.from("profiles").select("display_name, role, location, bio, account_type").eq("user_id", user.id).maybeSingle();
-      if (data) setProfile(data as Profile);
-      const { data: d } = await supabase.from("diagnoses").select("id, crop, disease, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20);
-      setDiags((d ?? []) as Diag[]);
-      setLoaded(true);
+      try {
+        const docRef = doc(db, "profiles", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) setProfile(docSnap.data() as Profile);
+        
+        const dq = query(
+          collection(db, "diagnoses"),
+          where("user_id", "==", user.uid),
+          orderBy("created_at", "desc"),
+          limit(20)
+        );
+        const snapshot = await getDocs(dq);
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Diag[];
+        setDiags(data);
+      } catch (e: any) {
+        console.error("Error loading profile data:", e.message);
+      } finally {
+        setLoaded(true);
+      }
     })();
-  }, [user]);
+  }, [user?.uid]);
 
   if (authLoading) return <AppShell><div className="py-10 text-center"><Loader2 className="h-5 w-5 mx-auto animate-spin text-muted-foreground" /></div></AppShell>;
 
@@ -57,14 +72,22 @@ function ProfilePage() {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (!user) return;
     setSaving(true);
-    const { error } = await supabase.from("profiles").update({
-      display_name: profile.display_name, role: profile.role, location: profile.location, bio: profile.bio,
-      account_type: profile.account_type as "farmer" | "expert" | "research_center" | null,
-    }).eq("user_id", user!.id);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success("Profile saved");
+    try {
+      await updateDoc(doc(db, "profiles", user.uid), {
+        display_name: profile.display_name, 
+        role: profile.role, 
+        location: profile.location, 
+        bio: profile.bio,
+        account_type: profile.account_type as "farmer" | "expert" | "research_center" | null,
+      });
+      toast.success("Profile saved");
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (

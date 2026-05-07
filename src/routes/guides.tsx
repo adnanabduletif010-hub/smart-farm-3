@@ -13,7 +13,18 @@ import {
   Sparkles, Loader2, ArrowLeft, Plus, Pencil, Trash2,
 } from "lucide-react";
 
-import { supabase } from "@/integrations/supabase/client";
+import { db, auth } from "@/lib/firebase";
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  deleteDoc, 
+  doc, 
+  getDocs, 
+  updateDoc 
+} from "firebase/firestore";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { toast } from "sonner";
 import { askCropGuide } from "@/lib/api-helpers";
@@ -61,22 +72,28 @@ function GuidesPage() {
   const [editing, setEditing] = useState<GuideRow | null>(null);
   const { isAdmin } = useIsAdmin();
 
-  async function load() {
-    setLoading(true);
-    const { data, error } = await supabase.from("crop_guides").select("*").order("name_en");
-    if (error) toast.error(error.message);
-    setGuides((data ?? []) as GuideRow[]);
-    setLoading(false);
-  }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const q = query(collection(db, "crop_guides"), orderBy("name_en"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as GuideRow[];
+      setGuides(data);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error loading guides:", error.message);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   async function deleteGuide(g: GuideRow) {
     if (!confirm(`Delete guide "${g.name_en}"?`)) return;
-    const { error } = await supabase.from("crop_guides").delete().eq("id", g.id);
-    if (error) return toast.error(error.message);
-    toast.success("Guide deleted");
-    if (active?.id === g.id) setActive(null);
-    load();
+    try {
+      await deleteDoc(doc(db, "crop_guides", g.id));
+      toast.success("Guide deleted");
+      if (active?.id === g.id) setActive(null);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   if (active) {
@@ -145,7 +162,7 @@ function GuidesPage() {
         open={editorOpen}
         setOpen={setEditorOpen}
         existing={editing}
-        onSaved={() => { setEditorOpen(false); setEditing(null); load(); }}
+        onSaved={() => { setEditorOpen(false); setEditing(null); }}
       />
     </AppShell>
   );
@@ -168,8 +185,7 @@ function GuideDetail({
     setLoading(true);
     setAnswer(null);
     try {
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
+      const token = await auth.currentUser?.getIdToken();
       if (!token) {
         setLoading(false);
         return toast.error("Please sign in to ask the AI agronomist.");
@@ -323,13 +339,20 @@ function GuideEditor({
       pests_en: form.pests_en || null, pests_om: form.pests_om || null, pests_am: form.pests_am || null,
       harvest_en: form.harvest_en || null, harvest_om: form.harvest_om || null, harvest_am: form.harvest_am || null,
     };
-    const { error } = existing
-      ? await supabase.from("crop_guides").update(payload).eq("id", existing.id)
-      : await supabase.from("crop_guides").insert(payload);
-    setSaving(false);
-    if (error) return toast.error(error.message);
-    toast.success(existing ? "Guide updated" : "Guide created");
-    onSaved();
+    try {
+      if (existing) {
+        await updateDoc(doc(db, "crop_guides", existing.id), payload);
+        toast.success("Guide updated");
+      } else {
+        await addDoc(collection(db, "crop_guides"), payload);
+        toast.success("Guide created");
+      }
+      onSaved();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const trio = (label: string, base: typeof FIELDS[number]) => (

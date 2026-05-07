@@ -10,7 +10,8 @@ import { Camera, Upload, Loader2, Sparkles, FlaskConical, Home, Shield, AlertCir
 import { toast } from "sonner";
 
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { collection, addDoc } from "firebase/firestore";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/diagnose")({
@@ -77,14 +78,18 @@ function DiagnosePage() {
       }
       setResult(r);
       // Save history (associated with user if logged in, otherwise anonymous)
-      await supabase.from("diagnoses").insert({
-        user_id: user?.id ?? null,
-        crop: crop || null,
-        disease: r.disease,
-        confidence: r.confidence,
-        scientific_solution: r.scientific_solution,
-        home_remedy: r.home_remedy,
-      });
+      if (user) {
+        const historyRef = collection(db, "diagnoses");
+        await addDoc(historyRef, {
+          user_id: user.uid,
+          crop: crop || null,
+          disease: r.disease,
+          confidence: r.confidence,
+          scientific_solution: r.scientific_solution,
+          home_remedy: r.home_remedy,
+          created_at: new Date().toISOString(),
+        });
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Diagnosis failed");
     } finally {

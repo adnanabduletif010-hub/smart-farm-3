@@ -5,7 +5,7 @@ import { getRouter } from "./router";
 import "@/i18n";
 import "./styles.css";
 
-import { AuthProvider } from "./components/AuthProvider";
+import { AuthProvider } from "@/components/AuthProvider";
 
 const router = getRouter();
 

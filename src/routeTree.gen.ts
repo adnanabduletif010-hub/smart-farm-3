@@ -21,7 +21,6 @@ import { Route as ExpertsRouteImport } from './routes/experts'
 import { Route as DiagnoseRouteImport } from './routes/diagnose'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiPublicIotIngestRouteImport } from './routes/api.public.iot.ingest'
 
 const VideosRoute = VideosRouteImport.update({
   id: '/videos',
@@ -83,11 +82,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiPublicIotIngestRoute = ApiPublicIotIngestRouteImport.update({
-  id: '/api/public/iot/ingest',
-  path: '/api/public/iot/ingest',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -102,7 +96,6 @@ export interface FileRoutesByFullPath {
   '/research': typeof ResearchRoute
   '/reset-password': typeof ResetPasswordRoute
   '/videos': typeof VideosRoute
-  '/api/public/iot/ingest': typeof ApiPublicIotIngestRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,7 +110,6 @@ export interface FileRoutesByTo {
   '/research': typeof ResearchRoute
   '/reset-password': typeof ResetPasswordRoute
   '/videos': typeof VideosRoute
-  '/api/public/iot/ingest': typeof ApiPublicIotIngestRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -133,7 +125,6 @@ export interface FileRoutesById {
   '/research': typeof ResearchRoute
   '/reset-password': typeof ResetPasswordRoute
   '/videos': typeof VideosRoute
-  '/api/public/iot/ingest': typeof ApiPublicIotIngestRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -150,7 +141,6 @@ export interface FileRouteTypes {
     | '/research'
     | '/reset-password'
     | '/videos'
-    | '/api/public/iot/ingest'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -165,7 +155,6 @@ export interface FileRouteTypes {
     | '/research'
     | '/reset-password'
     | '/videos'
-    | '/api/public/iot/ingest'
   id:
     | '__root__'
     | '/'
@@ -180,7 +169,6 @@ export interface FileRouteTypes {
     | '/research'
     | '/reset-password'
     | '/videos'
-    | '/api/public/iot/ingest'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -196,7 +184,6 @@ export interface RootRouteChildren {
   ResearchRoute: typeof ResearchRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   VideosRoute: typeof VideosRoute
-  ApiPublicIotIngestRoute: typeof ApiPublicIotIngestRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -285,13 +272,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/iot/ingest': {
-      id: '/api/public/iot/ingest'
-      path: '/api/public/iot/ingest'
-      fullPath: '/api/public/iot/ingest'
-      preLoaderRoute: typeof ApiPublicIotIngestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -308,7 +288,6 @@ const rootRouteChildren: RootRouteChildren = {
   ResearchRoute: ResearchRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   VideosRoute: VideosRoute,
-  ApiPublicIotIngestRoute: ApiPublicIotIngestRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

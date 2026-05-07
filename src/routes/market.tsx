@@ -9,7 +9,20 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, MapPin, Tag, Phone, Loader2, ShoppingBag, Sprout, Pencil, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db, storage } from "@/lib/firebase";
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  deleteDoc, 
+  doc, 
+  updateDoc,
+  getDocs
+} from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
@@ -55,40 +68,31 @@ function MarketPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Listing | null>(null);
 
-  async function load() {
-    setLoading(true);
-    // Always browse via the listings_public view (excludes contact column).
-    // Owners' contact is fetched lazily via the get_listing_contact RPC.
-    const { data, error } = await supabase
-      .from("listings_public" as any)
-      .select("*")
-      .eq("type", tab)
-      .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
-    let rows = ((data ?? []) as unknown) as Listing[];
-    if (user) {
-      const myIds = rows.filter((r) => r.user_id === user.id).map((r) => r.id);
-      if (myIds.length) {
-        const contacts = await Promise.all(
-          myIds.map((id) =>
-            supabase.rpc("get_listing_contact", { _listing_id: id }).then((r) => ({ id, c: (r.data as string) ?? null }))
-          )
-        );
-        const map = new Map(contacts.map((x) => [x.id, x.c]));
-        rows = rows.map((r) => (map.has(r.id) ? { ...r, contact: map.get(r.id) ?? null } : r));
-      }
-    }
-    setListings(rows);
-    setLoading(false);
-  }
-  useEffect(() => { load(); }, [tab, user]);
+  useEffect(() => {
+    const q = query(
+      collection(db, "listings"),
+      where("type", "==", tab),
+      orderBy("created_at", "desc")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const rows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Listing[];
+      setListings(rows);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error loading listings:", error.message);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [tab, user?.uid]);
 
   async function deleteListing(l: Listing) {
     if (!confirm(`Delete "${l.title}"?`)) return;
-    const { error } = await supabase.from("listings").delete().eq("id", l.id);
-    if (error) return toast.error(error.message);
-    toast.success("Listing deleted");
-    load();
+    try {
+      await deleteDoc(doc(db, "listings", l.id));
+      toast.success("Listing deleted");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   return (
@@ -109,7 +113,7 @@ function MarketPage() {
             open={open}
             setOpen={setOpen}
             user={user}
-            onSaved={load}
+            onSaved={() => {}}
           />
         </div>
 
@@ -123,7 +127,7 @@ function MarketPage() {
             </Card>
           ) : (
             listings.map((l, i) => {
-              const mine = user && l.user_id === user.id;
+              const mine = user && l.user_id === user.uid;
               return (
                 <Card
                   key={l.id}
@@ -180,7 +184,7 @@ function MarketPage() {
           open={!!editing}
           setOpen={(v) => { if (!v) setEditing(null); }}
           user={user}
-          onSaved={() => { setEditing(null); load(); }}
+          onSaved={() => { setEditing(null); }}
         />
       )}
     </AppShell>
@@ -203,24 +207,17 @@ function ListingDialog({
 
   useEffect(() => {
     if (mode === "edit" && existing) {
-      (async () => {
-        let contact = existing.contact ?? "";
-        if (!contact) {
-          const { data } = await supabase.rpc("get_listing_contact", { _listing_id: existing.id });
-          contact = (data as string) ?? "";
-        }
-        setForm({
-          title: existing.title,
-          description: existing.description ?? "",
-          category: existing.category ?? "",
-          price: String(existing.price ?? ""),
-          unit: existing.unit ?? "kg",
-          quantity: existing.quantity != null ? String(existing.quantity) : "",
-          location: existing.location ?? "",
-          contact,
-          image_url: existing.image_url ?? "",
-        });
-      })();
+      setForm({
+        title: existing.title,
+        description: existing.description ?? "",
+        category: existing.category ?? "",
+        price: String(existing.price ?? ""),
+        unit: existing.unit ?? "kg",
+        quantity: existing.quantity != null ? String(existing.quantity) : "",
+        location: existing.location ?? "",
+        contact: existing.contact ?? "",
+        image_url: existing.image_url ?? "",
+      });
     } else if (mode === "create") {
       setForm(emptyForm);
     }
@@ -242,14 +239,21 @@ function ListingDialog({
       contact: form.contact || null,
       image_url: form.image_url || null,
     };
-    const { error } = mode === "edit" && existing
-      ? await supabase.from("listings").update(payload).eq("id", existing.id)
-      : await supabase.from("listings").insert({ ...payload, user_id: user.id });
-    setSubmitting(false);
-    if (error) return toast.error(error.message);
-    toast.success(mode === "edit" ? "Listing updated!" : "Listing posted!");
-    setOpen(false);
-    onSaved();
+    try {
+      if (mode === "edit" && existing) {
+        await updateDoc(doc(db, "listings", existing.id), payload);
+        toast.success("Listing updated!");
+      } else {
+        await addDoc(collection(db, "listings"), { ...payload, user_id: user.uid, created_at: new Date().toISOString() });
+        toast.success("Listing posted!");
+      }
+      setOpen(false);
+      onSaved();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -292,12 +296,16 @@ function ListingDialog({
                   if (!file || !user) return;
                   if (file.size > 8 * 1024 * 1024) return toast.error("Image too large (max 8 MB)");
                   const ext = file.name.split(".").pop() || "jpg";
-                  const path = `${user.id}/${Date.now()}.${ext}`;
-                  const { error: upErr } = await supabase.storage.from("listing-photos").upload(path, file, { upsert: false });
-                  if (upErr) return toast.error(upErr.message);
-                  const { data: pub } = supabase.storage.from("listing-photos").getPublicUrl(path);
-                  setForm((f) => ({ ...f, image_url: pub.publicUrl }));
-                  toast.success("Photo uploaded");
+                  const path = `listings/${user.uid}/${Date.now()}.${ext}`;
+                  try {
+                    const storageRef = ref(storage, path);
+                    const snapshot = await uploadBytes(storageRef, file);
+                    const url = await getDownloadURL(snapshot.ref);
+                    setForm((f) => ({ ...f, image_url: url }));
+                    toast.success("Photo uploaded");
+                  } catch (e: any) {
+                    toast.error(e.message);
+                  }
                 }}
                 className="block w-full text-sm"
               />

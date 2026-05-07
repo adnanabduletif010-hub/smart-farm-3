@@ -8,7 +8,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Video, Loader2, Trash2, Heart, MessageCircle, Share2, Send } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db, storage } from "@/lib/firebase";
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  deleteDoc, 
+  doc, 
+  getDocs, 
+  where,
+  setDoc,
+  getDoc
+} from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
 import { toast } from "sonner";
@@ -58,77 +72,71 @@ function VideosPage() {
   const [likes, setLikes] = useState<Record<string, { count: number; likers: Set<string> }>>({});
   const [openComments, setOpenComments] = useState<string | null>(null);
 
-  async function load() {
-    const { data } = await supabase.from("videos").select("*").order("created_at", { ascending: false });
-    const list = (data ?? []) as V[];
-    setVids(list);
-    setLoading(false);
-    if (list.length) {
-      const ids = list.map((v) => v.id);
-      const { data: likeRows } = await supabase.from("video_likes" as any).select("video_id, user_id").in("video_id", ids);
-      const map: Record<string, { count: number; likers: Set<string> }> = {};
-      ids.forEach((id) => (map[id] = { count: 0, likers: new Set() }));
-      (likeRows ?? []).forEach((r: any) => {
-        map[r.video_id].count++;
-        map[r.video_id].likers.add(r.user_id);
-      });
-      setLikes(map);
-    }
-  }
-  // Load videos once on mount — do NOT gate on auth, so the page renders fast
-  useEffect(() => { load(); }, []);
-
-  // Realtime: keep like counts and my-like state fresh across tabs/devices
   useEffect(() => {
-    const channel = supabase
-      .channel("video_likes_feed")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "video_likes" },
-        (payload: any) => {
-          const row = (payload.new ?? payload.old) as { video_id: string; user_id: string };
-          if (!row?.video_id) return;
-          setLikes((prev) => {
-            const cur = prev[row.video_id] ?? { count: 0, likers: new Set<string>() };
-            const likers = new Set(cur.likers);
-            if (payload.eventType === "INSERT") {
-              likers.add(row.user_id);
-              return { ...prev, [row.video_id]: { count: cur.count + 1, likers } };
-            }
-            if (payload.eventType === "DELETE") {
-              likers.delete(row.user_id);
-              return { ...prev, [row.video_id]: { count: Math.max(0, cur.count - 1), likers } };
-            }
-            return prev;
-          });
-        }
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const q = query(collection(db, "videos"), orderBy("created_at", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as V[];
+      setVids(list);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error loading videos:", error);
+      toast.error("Failed to load videos: " + error.message);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!vids.length) return;
+    
+    const unsubscribes = vids.map(v => {
+      const q = query(collection(db, "video_likes"), where("video_id", "==", v.id));
+      return onSnapshot(q, (snapshot) => {
+        const likers = new Set(snapshot.docs.map(d => d.data().user_id));
+        setLikes(prev => ({
+          ...prev,
+          [v.id]: { count: snapshot.size, likers }
+        }));
+      });
+    });
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [vids.map(v => v.id).join(",")]);
+
 
   async function del(v: V) {
     if (!confirm(t("videos.confirmDelete"))) return;
-    const { error } = await supabase.from("videos").delete().eq("id", v.id);
-    if (error) return toast.error(error.message);
-    toast.success(t("videos.deleted"));
-    load();
+    try {
+      await deleteDoc(doc(db, "videos", v.id));
+      // Delete comments and likes
+      const cq = query(collection(db, "video_comments"), where("video_id", "==", v.id));
+      const cSnap = await getDocs(cq);
+      for (const d of cSnap.docs) await deleteDoc(doc(db, "video_comments", d.id));
+      
+      const lq = query(collection(db, "video_likes"), where("video_id", "==", v.id));
+      const lSnap = await getDocs(lq);
+      for (const d of lSnap.docs) await deleteDoc(doc(db, "video_likes", d.id));
+
+      toast.success(t("videos.deleted"));
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   async function toggleLike(v: V) {
     if (!user) return toast.error("Sign in to like");
     const cur = likes[v.id] ?? { count: 0, likers: new Set<string>() };
-    const mine = cur.likers.has(user.id);
-    if (mine) {
-      const likers = new Set(cur.likers); likers.delete(user.id);
-      setLikes({ ...likes, [v.id]: { count: Math.max(0, cur.count - 1), likers } });
-      const { error } = await supabase.from("video_likes" as any).delete().eq("video_id", v.id).eq("user_id", user.id);
-      if (error) { toast.error(error.message); load(); }
-    } else {
-      const likers = new Set(cur.likers); likers.add(user.id);
-      setLikes({ ...likes, [v.id]: { count: cur.count + 1, likers } });
-      const { error } = await supabase.from("video_likes" as any).insert({ video_id: v.id, user_id: user.id });
-      if (error) { toast.error(error.message); load(); }
+    const mine = cur.likers.has(user.uid);
+    try {
+      if (mine) {
+        const q = query(collection(db, "video_likes"), where("video_id", "==", v.id), where("user_id", "==", user.uid));
+        const snap = await getDocs(q);
+        for (const d of snap.docs) await deleteDoc(doc(db, "video_likes", d.id));
+      } else {
+        await addDoc(collection(db, "video_likes"), { video_id: v.id, user_id: user.uid });
+      }
+    } catch (e: any) {
+      toast.error(e.message);
     }
   }
 
@@ -145,7 +153,7 @@ function VideosPage() {
     <AppShell title={t("videos.title")} subtitle={t("videos.subtitle")}>
       {canPostVideos && (
         <div className="flex justify-end mb-3">
-          <NewVideoDialog user={user} onCreated={load} />
+          <NewVideoDialog user={user} onCreated={() => {}} />
         </div>
       )}
 
@@ -162,11 +170,11 @@ function VideosPage() {
       ) : (
         <div className="space-y-3">
           {vids.map((v, i) => {
-            const mine = user && v.user_id === user.id;
+            const mine = user && v.user_id === user.uid;
             const embed = getEmbed(v.url);
             const direct = isDirectVideo(v.url);
             const like = likes[v.id] ?? { count: 0, likers: new Set<string>() };
-            const mineLike = !!user && like.likers.has(user.id);
+            const mineLike = !!user && like.likers.has(user.uid);
             return (
               <Card key={v.id} className="p-3 border-0 shadow-soft animate-fade-up overflow-hidden" style={{ animationDelay: `${i * 30}ms` }}>
                 {direct ? (
@@ -227,9 +235,16 @@ function Comments({ videoId, user }: { videoId: string; user: any }) {
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase.from("video_comments" as any).select("*").eq("video_id", videoId).order("created_at", { ascending: true });
-    setItems((data ?? []) as unknown as Comment[]);
-    setLoading(false);
+    try {
+      const q = query(collection(db, "video_comments"), where("video_id", "==", videoId), orderBy("created_at", "asc"));
+      const snapshot = await getDocs(q);
+      setItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any);
+    } catch (error: any) {
+      console.error("Error loading video comments:", error);
+      toast.error("Failed to load comments: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => { load(); }, [videoId]);
 
@@ -238,17 +253,29 @@ function Comments({ videoId, user }: { videoId: string; user: any }) {
     if (!user) return toast.error("Sign in to comment");
     if (!body.trim()) return;
     setPosting(true);
-    const { error } = await supabase.from("video_comments" as any).insert({ video_id: videoId, user_id: user.id, body: body.trim() });
-    setPosting(false);
-    if (error) return toast.error(error.message);
-    setBody("");
-    load();
+    try {
+      await addDoc(collection(db, "video_comments"), {
+        video_id: videoId,
+        user_id: user.uid,
+        body: body.trim(),
+        created_at: new Date().toISOString()
+      });
+      setBody("");
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setPosting(false);
+    }
   }
 
   async function del(id: string) {
-    const { error } = await supabase.from("video_comments" as any).delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    setItems(items.filter((c) => c.id !== id));
+    try {
+      await deleteDoc(doc(db, "video_comments", id));
+      setItems(items.filter((c) => c.id !== id));
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   return (
@@ -264,7 +291,7 @@ function Comments({ videoId, user }: { videoId: string; user: any }) {
               <p className="leading-snug">{c.body}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">{new Date(c.created_at).toLocaleString()}</p>
             </div>
-            {user?.id === c.user_id && (
+            {user?.uid === c.user_id && (
               <Button size="sm" variant="ghost" className="h-6 px-1 text-destructive" onClick={() => del(c.id)}>
                 <Trash2 className="h-3 w-3" />
               </Button>
@@ -298,12 +325,16 @@ function NewVideoDialog({ user, onCreated }: { user: any; onCreated: () => void 
 
     if (file) {
       setLoading(true);
-      const ext = file.name.split(".").pop() || "mp4";
-      const path = `${user.id}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("videos").upload(path, file, { contentType: file.type });
-      if (upErr) { setLoading(false); return toast.error(upErr.message); }
-      const { data: pub } = supabase.storage.from("videos").getPublicUrl(path);
-      finalUrl = pub.publicUrl;
+      try {
+        const ext = file.name.split(".").pop() || "mp4";
+        const path = `videos/${user.uid}/${Date.now()}.${ext}`;
+        const storageRef = ref(storage, path);
+        const snapshot = await uploadBytes(storageRef, file);
+        finalUrl = await getDownloadURL(snapshot.ref);
+      } catch (e: any) {
+        setLoading(false);
+        return toast.error(e.message);
+      }
     } else if (!finalUrl) {
       return toast.error("Provide a YouTube/Vimeo URL or upload a file");
     } else if (!getEmbed(finalUrl) && !isDirectVideo(finalUrl)) {
@@ -311,20 +342,25 @@ function NewVideoDialog({ user, onCreated }: { user: any; onCreated: () => void 
     }
 
     setLoading(true);
-    const { error } = await supabase.from("videos").insert({
-      user_id: user.id,
-      title: form.title.trim(),
-      description: form.description || null,
-      url: finalUrl,
-      topic: form.topic || null,
-    });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success(t("videos.posted"));
-    setOpen(false);
-    setForm({ title: "", description: "", url: "", topic: "" });
-    setFile(null);
-    onCreated();
+    try {
+      await addDoc(collection(db, "videos"), {
+        user_id: user.uid,
+        title: form.title.trim(),
+        description: form.description || null,
+        url: finalUrl,
+        topic: form.topic || null,
+        created_at: new Date().toISOString()
+      });
+      toast.success(t("videos.posted"));
+      setOpen(false);
+      setForm({ title: "", description: "", url: "", topic: "" });
+      setFile(null);
+      onCreated();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

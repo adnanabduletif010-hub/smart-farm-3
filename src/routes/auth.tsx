@@ -1,7 +1,15 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+import { auth, db } from "@/lib/firebase";
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendPasswordResetEmail, 
+  signInWithPopup, 
+  GoogleAuthProvider,
+  updateProfile
+} from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,23 +43,28 @@ function AuthPage() {
 
   // If already signed in, bounce home.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) nav({ to: "/" });
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) nav({ to: "/" });
     });
+    return () => unsubscribe();
   }, [nav]);
 
   async function googleSignIn() {
     setGoogleLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
-      });
-      if (result.error) {
-        toast.error(result.error.message ?? "Google sign-in failed");
-        setGoogleLoading(false);
-        return;
-      }
-      if (result.redirected) return;
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      
+      // If new user, create profile doc
+      const user = result.user;
+      const docRef = doc(db, "profiles", user.uid);
+      await setDoc(docRef, {
+        display_name: user.displayName || "Farmer",
+        role: "user",
+        account_type: "farmer",
+        created_at: new Date().toISOString(),
+      }, { merge: true });
+
       toast.success("Welcome!");
       nav({ to: "/" });
     } catch (e: any) {
@@ -65,35 +78,29 @@ function AuthPage() {
     setLoading(true);
     try {
       if (view === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: { display_name: name.trim() || email.split("@")[0] },
-          },
+        const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        const user = userCredential.user;
+        
+        await updateProfile(user, { displayName: name.trim() || email.split("@")[0] });
+        
+        // Create Firestore profile
+        await setDoc(doc(db, "profiles", user.uid), {
+          display_name: name.trim() || email.split("@")[0],
+          role: "user",
+          account_type: "farmer",
+          created_at: new Date().toISOString(),
         });
-        if (error) throw error;
-        if (data.session) {
-          toast.success("Account created — welcome!");
-          nav({ to: "/" });
-        } else {
-          toast.success("Check your inbox to confirm your email.");
-          setView("signin");
-        }
+
+        toast.success("Account created — welcome!");
+        nav({ to: "/" });
       } else if (view === "signin") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-        if (error) throw error;
+        await signInWithEmailAndPassword(auth, email.trim(), password);
         toast.success("Welcome back!");
         nav({ to: "/" });
       } else {
-        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: `${window.location.origin}/reset-password`,
+        await sendPasswordResetEmail(auth, email.trim(), {
+          url: `${window.location.origin}/auth`,
         });
-        if (error) throw error;
         toast.success("Password reset email sent.");
         setView("signin");
       }

@@ -1,7 +1,7 @@
 import { Outlet, createRootRoute, Link } from "@tanstack/react-router";
 import "../styles.css";
 import "@/i18n";
-import { AccountTypeGate } from "@/components/AccountTypeGate";
+
 
 function NotFoundComponent() {
   return (
@@ -34,7 +34,6 @@ function RootComponent() {
   return (
     <>
       <Outlet />
-      <AccountTypeGate />
     </>
   );
 }

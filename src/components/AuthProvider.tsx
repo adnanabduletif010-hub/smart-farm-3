@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { Session, User } from "@supabase/supabase-js";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { doc, getDoc, onSnapshot, Unsubscribe } from "firebase/firestore";
 import { toast } from "sonner";
 
 export type AccountType = "farmer" | "expert" | "research_center" | null;
@@ -14,7 +15,6 @@ export type Profile = {
 };
 
 type AuthContextType = {
-  session: Session | null;
   user: User | null;
   profile: Profile | null;
   loading: boolean;
@@ -24,58 +24,71 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("display_name, role, location, bio, account_type")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (error) {
+    try {
+      const docRef = doc(db, "profiles", userId);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setProfile(docSnap.data() as Profile);
+      } else {
+        setProfile(null);
+      }
+    } catch (error: any) {
       console.error("Error fetching profile:", error.message);
-      return;
     }
-    setProfile(data as Profile);
   };
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    if (user) await fetchProfile(user.uid);
   };
 
   useEffect(() => {
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setLoading(false));
+    let profileUnsubscribe: Unsubscribe | null = null;
+
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+      
+      // Clean up previous profile subscription if any
+      if (profileUnsubscribe) {
+        profileUnsubscribe();
+        profileUnsubscribe = null;
+      }
+
+      if (firebaseUser) {
+        // Start real-time profile listener
+        profileUnsubscribe = onSnapshot(
+          doc(db, "profiles", firebaseUser.uid),
+          (snapshot) => {
+            if (snapshot.exists()) {
+              setProfile(snapshot.data() as Profile);
+            } else {
+              setProfile(null);
+            }
+            setLoading(false);
+          },
+          (error) => {
+            console.error("Profile listener error:", error);
+            setLoading(false);
+          }
+        );
       } else {
+        setProfile(null);
         setLoading(false);
       }
     });
 
-    // Auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchProfile(session.user.id);
-      } else {
-        setProfile(null);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      unsubscribe();
+      if (profileUnsubscribe) profileUnsubscribe();
+    };
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { auth } from "@/lib/firebase";
+import { confirmPasswordReset, updatePassword, onAuthStateChanged } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,16 +22,20 @@ function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
+  const [oobCode, setOobCode] = useState<string | null>(null);
 
   useEffect(() => {
-    // Supabase auto-handles the recovery token from the URL hash and emits an event.
-    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") setReady(true);
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("oobCode");
+    if (code) {
+      setOobCode(code);
+      setReady(true);
+    }
+
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) setReady(true);
     });
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
-    });
-    return () => sub.subscription.unsubscribe();
+    return () => unsub();
   }, []);
 
   async function submit(e: React.FormEvent) {
@@ -41,10 +46,17 @@ function ResetPasswordPage() {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
-      toast.success("Password updated. You're signed in.");
-      nav({ to: "/" });
+      if (oobCode) {
+        await confirmPasswordReset(auth, oobCode, password);
+        toast.success("Password reset successful. You can now sign in.");
+        nav({ to: "/auth" });
+      } else if (auth.currentUser) {
+        await updatePassword(auth.currentUser, password);
+        toast.success("Password updated.");
+        nav({ to: "/" });
+      } else {
+        toast.error("Session expired or invalid link");
+      }
     } catch (err: any) {
       toast.error(err?.message ?? "Could not update password");
     } finally {

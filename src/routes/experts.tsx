@@ -8,7 +8,20 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, MessageCircle, Loader2, Send, ChevronLeft, Pencil, Trash2, X, Check, Sparkles, Image as ImageIcon } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  deleteDoc, 
+  doc, 
+  getDocs, 
+  where,
+  updateDoc,
+  getDoc
+} from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
 import { toast } from "sonner";
@@ -38,44 +51,75 @@ function ExpertsPage() {
   const [replies, setReplies] = useState<R[]>([]);
   const [loading, setLoading] = useState(true);
 
-  async function load() {
-    setLoading(true);
-    const { data } = await supabase.from("expert_questions").select("*").order("created_at", { ascending: false });
-    setQs((data ?? []) as Q[]);
-    setLoading(false);
-  }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const q = query(collection(db, "expert_questions"), orderBy("created_at", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Q[];
+      setQs(data);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error loading questions:", error);
+      toast.error("Failed to load questions: " + error.message);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   async function openThread(q: Q) {
     setActive(q);
-    const { data } = await supabase.from("expert_replies").select("*").eq("question_id", q.id).order("created_at");
-    setReplies((data ?? []) as R[]);
+    try {
+      const rq = query(collection(db, "expert_replies"), where("question_id", "==", q.id), orderBy("created_at"));
+      const snapshot = await getDocs(rq);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as R[];
+      setReplies(data);
+    } catch (error: any) {
+      console.error("Error loading replies:", error);
+      toast.error("Failed to load replies: " + error.message);
+    }
   }
 
   async function refreshReplies(qid: string) {
-    const { data } = await supabase.from("expert_replies").select("*").eq("question_id", qid).order("created_at");
-    setReplies((data ?? []) as R[]);
+    try {
+      const rq = query(collection(db, "expert_replies"), where("question_id", "==", qid), orderBy("created_at"));
+      const snapshot = await getDocs(rq);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as R[];
+      setReplies(data);
+    } catch (error: any) {
+      console.error("Error refreshing replies:", error);
+      toast.error("Failed to load replies: " + error.message);
+    }
   }
 
   async function deleteQuestion(q: Q) {
     if (!confirm("Delete this question and all its replies?")) return;
-    const { error } = await supabase.from("expert_questions").delete().eq("id", q.id);
-    if (error) return toast.error(error.message);
-    toast.success("Question deleted");
-    setActive(null);
-    load();
+    try {
+      await deleteDoc(doc(db, "expert_questions", q.id));
+      // Optionally delete all replies too (Firestore doesn't do this automatically)
+      const rq = query(collection(db, "expert_replies"), where("question_id", "==", q.id));
+      const snapshot = await getDocs(rq);
+      for (const d of snapshot.docs) {
+        await deleteDoc(doc(db, "expert_replies", d.id));
+      }
+      toast.success("Question deleted");
+      setActive(null);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   async function deleteReply(r: R) {
     if (!confirm("Delete this reply?")) return;
-    const { error } = await supabase.from("expert_replies").delete().eq("id", r.id);
-    if (error) return toast.error(error.message);
-    toast.success("Reply deleted");
-    if (active) refreshReplies(active.id);
+    try {
+      await deleteDoc(doc(db, "expert_replies", r.id));
+      toast.success("Reply deleted");
+      if (active) refreshReplies(active.id);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   if (active) {
-    const isOwner = user && active.user_id === user.id;
+    const isOwner = user && active.user_id === user.uid;
     return (
       <AppShell title="Q&A" subtitle={active.topic ?? "Discussion"}>
         <Button variant="ghost" onClick={() => setActive(null)} className="-ml-2 mb-2 rounded-full">
@@ -87,7 +131,7 @@ function ExpertsPage() {
               {active.topic}
             </span>
           )}
-          <EditableQuestion q={active} canEdit={!!isOwner} onSaved={(updated) => { setActive(updated); load(); }} />
+          <EditableQuestion q={active} canEdit={!!isOwner} onSaved={(updated) => { setActive(updated); }} />
           {isOwner && (
             <div className="flex justify-end mt-2">
               <Button size="sm" variant="ghost" onClick={() => deleteQuestion(active)} className="text-destructive h-8">
@@ -102,7 +146,7 @@ function ExpertsPage() {
             <p className="text-xs text-muted-foreground text-center py-4">No replies yet — be the first.</p>
           ) : (
             replies.map((r) => {
-              const mine = user && r.user_id === user.id;
+              const mine = user && r.user_id === user.uid;
               return (
                 <Card key={r.id} className="p-3 border-0 shadow-soft animate-fade-up">
                   <EditableReply r={r} canEdit={!!mine} onSaved={() => active && refreshReplies(active.id)} />
@@ -137,7 +181,7 @@ function ExpertsPage() {
     <AppShell title="Experts" subtitle="Ask & discuss with agronomists">
       <div className="flex justify-end gap-2 mb-3">
         <AskAIDialog />
-        <NewQuestionDialog user={user} onCreated={load} />
+        <NewQuestionDialog user={user} onCreated={() => {}} />
       </div>
 
       {loading ? (
@@ -200,14 +244,22 @@ function EditableQuestion({ q, canEdit, onSaved }: { q: Q; canEdit: boolean; onS
       <div className="flex gap-2">
         <Button size="sm" disabled={saving || !text.trim()} onClick={async () => {
           setSaving(true);
-          const { data, error } = await supabase.from("expert_questions")
-            .update({ topic: topic || null, question: text.trim() })
-            .eq("id", q.id).select().single();
-          setSaving(false);
-          if (error) return toast.error(error.message);
-          toast.success("Updated");
-          setEditing(false);
-          onSaved(data as Q);
+          try {
+            await updateDoc(doc(db, "expert_questions", q.id), {
+              topic: topic || null,
+              question: text.trim()
+            });
+            toast.success("Updated");
+            setEditing(false);
+            const updatedSnap = await getDoc(doc(db, "expert_questions", q.id));
+            if (updatedSnap.exists()) {
+              onSaved({ id: updatedSnap.id, ...updatedSnap.data() } as Q);
+            }
+          } catch (e: any) {
+            toast.error(e.message);
+          } finally {
+            setSaving(false);
+          }
         }}>
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3 mr-1" /> Save</>}
         </Button>
@@ -242,12 +294,16 @@ function EditableReply({ r, canEdit, onSaved }: { r: R; canEdit: boolean; onSave
       <div className="flex gap-2">
         <Button size="sm" disabled={saving || !text.trim()} onClick={async () => {
           setSaving(true);
-          const { error } = await supabase.from("expert_replies").update({ body: text.trim() }).eq("id", r.id);
-          setSaving(false);
-          if (error) return toast.error(error.message);
-          toast.success("Updated");
-          setEditing(false);
-          onSaved();
+          try {
+            await updateDoc(doc(db, "expert_replies", r.id), { body: text.trim() });
+            toast.success("Updated");
+            setEditing(false);
+            onSaved();
+          } catch (e: any) {
+            toast.error(e.message);
+          } finally {
+            setSaving(false);
+          }
         }}>
           {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3 mr-1" /> Save</>}
         </Button>
@@ -268,11 +324,20 @@ function ReplyBox({ user, questionId, onAdded }: { user: any; questionId: string
         e.preventDefault();
         if (!text.trim()) return;
         setLoading(true);
-        const { error } = await supabase.from("expert_replies").insert({ question_id: questionId, user_id: user?.id ?? null, body: text.trim() });
-        setLoading(false);
-        if (error) return toast.error(error.message);
-        setText("");
-        onAdded();
+        try {
+          await addDoc(collection(db, "expert_replies"), {
+            question_id: questionId,
+            user_id: user?.uid ?? null,
+            body: text.trim(),
+            created_at: new Date().toISOString()
+          });
+          setText("");
+          onAdded();
+        } catch (e: any) {
+          toast.error(e.message);
+        } finally {
+          setLoading(false);
+        }
       }}
       className="fixed bottom-20 inset-x-0 px-4 z-30"
     >
@@ -305,13 +370,21 @@ function NewQuestionDialog({ user, onCreated }: { user: any; onCreated: () => vo
             onSubmit={async (e) => {
               e.preventDefault();
               setLoading(true);
-              const { error } = await supabase.from("expert_questions").insert({
-                user_id: user?.id ?? null, topic: topic || null, question,
-              });
-              setLoading(false);
-              if (error) return toast.error(error.message);
-              toast.success("Question posted!");
-              setTopic(""); setQuestion(""); setOpen(false); onCreated();
+              try {
+                await addDoc(collection(db, "expert_questions"), {
+                  user_id: user?.uid ?? null,
+                  topic: topic || null,
+                  question: question.trim(),
+                  status: "open",
+                  created_at: new Date().toISOString()
+                });
+                toast.success("Question posted!");
+                setTopic(""); setQuestion(""); setOpen(false); onCreated();
+              } catch (e: any) {
+                toast.error(e.message);
+              } finally {
+                setLoading(false);
+              }
             }}
             className="space-y-3"
           >

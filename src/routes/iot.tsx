@@ -7,7 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Droplets, Cpu, Sparkles, Trash2, Plus, Radio, Copy, Check } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { auth, db } from "@/lib/firebase";
+import { 
+  collection, 
+  query, 
+  where, 
+  orderBy, 
+  limit, 
+  onSnapshot, 
+  addDoc, 
+  deleteDoc, 
+  doc,
+  getDocs
+} from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -61,19 +73,51 @@ function IoTPage() {
   const [adviceLoading, setAdviceLoading] = useState(false);
 
   async function load() {
+    if (!user) {
+      setReadings([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const q = supabase
-      .from("soil_readings")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(50);
-    const { data } = user ? await q.eq("user_id", user.id) : await q.is("user_id", null);
-    setReadings((data ?? []) as Reading[]);
-    setLoading(false);
+    try {
+      const q = query(
+        collection(db, "soil_readings"),
+        where("user_id", "==", user.uid),
+        orderBy("created_at", "desc"),
+        limit(50)
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Reading[];
+      setReadings(data);
+    } catch (e: any) {
+      console.error("Error loading readings:", e.message);
+    } finally {
+      setLoading(false);
+    }
   }
+
   useEffect(() => {
-    load();
-  }, [user?.id]);
+    if (!user) {
+      setReadings([]);
+      setLoading(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, "soil_readings"),
+      where("user_id", "==", user.uid),
+      orderBy("created_at", "desc"),
+      limit(50)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Reading[];
+      setReadings(data);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user?.uid]);
 
   const chartData = useMemo(
     () =>
@@ -94,8 +138,7 @@ function IoTPage() {
     setAdviceLoading(true);
     setAdvice(null);
     try {
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
+      const token = await user.getIdToken();
       if (!token) {
         setAdviceLoading(false);
         return toast.error("Please sign in to get AI advice.");
@@ -126,9 +169,12 @@ function IoTPage() {
 
   async function remove(id: string) {
     if (!user) return;
-    const { error } = await supabase.from("soil_readings").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    setReadings((r) => r.filter((x) => x.id !== id));
+    try {
+      await deleteDoc(doc(db, "soil_readings", id));
+      toast.success("Reading removed");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   return (
@@ -261,7 +307,7 @@ function IoTPage() {
                     </p>
                   </div>
                 </div>
-                {user && r.user_id === user.id && (
+                {user && r.user_id === user.uid && (
                   <Button
                     size="icon"
                     variant="ghost"
@@ -321,8 +367,8 @@ function AddReadingDialog({ user, onAdded }: { user: any; onAdded: () => void })
     e.preventDefault();
     setLoading(true);
     const num = (s: string) => (s === "" ? null : Number(s));
-    const { error } = await supabase.from("soil_readings").insert({
-      user_id: user?.id ?? null,
+    const { error } = await addDoc(collection(db, "soil_readings"), {
+      user_id: user?.uid ?? null,
       field_name: f.field_name || null,
       device_name: f.device_name || null,
       moisture: num(f.moisture),
@@ -333,7 +379,8 @@ function AddReadingDialog({ user, onAdded }: { user: any; onAdded: () => void })
       temperature: num(f.temperature),
       notes: f.notes || null,
       source: "manual",
-    });
+      created_at: new Date().toISOString(),
+    }).then(() => ({ error: null })).catch((e) => ({ error: e }));
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success(t("iot.saved"));
@@ -455,16 +502,19 @@ function DeviceSetupDialog({ user }: { user: any }) {
 
   async function load() {
     if (!user) return;
-    const { data } = await supabase
-      .from("iot_device_tokens")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setTokens((data ?? []) as DeviceToken[]);
+    const q = query(
+      collection(db, "iot_device_tokens"),
+      where("user_id", "==", user.uid),
+      orderBy("created_at", "desc")
+    );
+    const snapshot = await getDocs(q);
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as DeviceToken[];
+    setTokens(data);
   }
 
   useEffect(() => {
     if (open) load();
-  }, [open, user?.id]);
+  }, [open, user?.uid]);
 
   function genToken() {
     const arr = new Uint8Array(24);
@@ -476,24 +526,32 @@ function DeviceSetupDialog({ user }: { user: any }) {
     if (!user) return toast.error("Please sign in.");
     if (!deviceName.trim()) return toast.error("Device name required");
     setLoading(true);
-    const { error } = await supabase.from("iot_device_tokens").insert({
-      user_id: user.id,
-      device_name: deviceName.trim(),
-      field_name: fieldName.trim() || null,
-      token: genToken(),
-    });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Device registered");
-    setDeviceName("");
-    setFieldName("");
-    load();
+    try {
+      await addDoc(collection(db, "iot_device_tokens"), {
+        user_id: user.uid,
+        device_name: deviceName.trim(),
+        field_name: fieldName.trim() || null,
+        token: genToken(),
+        created_at: new Date().toISOString(),
+      });
+      toast.success("Device registered");
+      setDeviceName("");
+      setFieldName("");
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function remove(id: string) {
-    const { error } = await supabase.from("iot_device_tokens").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    setTokens((t) => t.filter((x) => x.id !== id));
+    try {
+      await deleteDoc(doc(db, "iot_device_tokens", id));
+      setTokens((t) => t.filter((x) => x.id !== id));
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   function copy(text: string, key: string) {

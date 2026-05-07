@@ -8,7 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, BookOpen, ExternalLink, MessageSquare, Loader2, Send, Pencil, Trash2, Check, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  deleteDoc, 
+  doc, 
+  getDocs, 
+  where,
+  updateDoc
+} from "firebase/firestore";
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
 import { toast } from "sonner";
@@ -50,37 +62,61 @@ function ResearchPage() {
 
   async function deletePost(p: Post) {
     if (!confirm("Delete this research post?")) return;
-    const { error } = await supabase.from("research_posts").delete().eq("id", p.id);
-    if (error) return toast.error(error.message);
-    toast.success("Deleted");
-    load();
+    try {
+      await deleteDoc(doc(db, "research_posts", p.id));
+      // Delete comments too
+      const cq = query(collection(db, "research_comments"), where("post_id", "==", p.id));
+      const snapshot = await getDocs(cq);
+      for (const d of snapshot.docs) {
+        await deleteDoc(doc(db, "research_comments", d.id));
+      }
+      toast.success("Deleted");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   async function deleteComment(c: Comment) {
     if (!confirm("Delete this comment?")) return;
-    const { error } = await supabase.from("research_comments").delete().eq("id", c.id);
-    if (error) return toast.error(error.message);
-    loadComments(c.post_id);
+    try {
+      await deleteDoc(doc(db, "research_comments", c.id));
+      loadComments(c.post_id);
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
-  async function load() {
-    setLoading(true);
-    const { data } = await supabase.from("research_posts").select("*").order("created_at", { ascending: false });
-    setPosts((data ?? []) as Post[]);
-    setLoading(false);
-  }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const q = query(collection(db, "research_posts"), orderBy("created_at", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
+      setPosts(data);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error loading research posts:", error);
+      toast.error("Failed to load research: " + error.message);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   async function loadComments(postId: string) {
-    const { data } = await supabase.from("research_comments").select("*").eq("post_id", postId).order("created_at");
-    setComments((c) => ({ ...c, [postId]: (data ?? []) as Comment[] }));
+    try {
+      const q = query(collection(db, "research_comments"), where("post_id", "==", postId), orderBy("created_at"));
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Comment[];
+      setComments((c) => ({ ...c, [postId]: data }));
+    } catch (error: any) {
+      console.error("Error loading comments:", error);
+      toast.error("Failed to load comments: " + error.message);
+    }
   }
 
   return (
     <AppShell title="Research" subtitle="Latest publications & discussion">
       {canPublishResearch && (
         <div className="flex justify-end mb-3">
-          <NewPostDialog open={open} setOpen={setOpen} user={user} onCreated={load} />
+          <NewPostDialog open={open} setOpen={setOpen} user={user} onCreated={() => {}} />
         </div>
       )}
       {!canPublishResearch && (
@@ -100,7 +136,7 @@ function ResearchPage() {
       ) : (
         <div className="space-y-3">
           {posts.map((p, i) => {
-            const mine = user && p.user_id === user.id;
+            const mine = user && p.user_id === user.uid;
             const isEditing = editingPost === p.id;
             return (
             <Card
@@ -109,7 +145,7 @@ function ResearchPage() {
               style={{ animationDelay: `${i * 40}ms` }}
             >
               {isEditing ? (
-                <EditPost p={p} onSaved={() => { setEditingPost(null); load(); }} onCancel={() => setEditingPost(null)} />
+                <EditPost p={p} onSaved={() => { setEditingPost(null); }} onCancel={() => setEditingPost(null)} />
               ) : (
                 <>
                   {p.topic && (
@@ -159,7 +195,7 @@ function ResearchPage() {
 
               {openComments === p.id && (
                 <div className="mt-3 pt-3 border-t border-border animate-fade-in">
-                  <CommentList comments={comments[p.id] ?? []} currentUserId={user?.id ?? null} onDelete={deleteComment} />
+                  <CommentList comments={comments[p.id] ?? []} currentUserId={user?.uid ?? null} onDelete={deleteComment} />
                   <CommentBox user={user} postId={p.id} onAdded={() => loadComments(p.id)} />
                 </div>
               )}
@@ -200,13 +236,20 @@ function CommentBox({ user, postId, onAdded }: { user: any; postId: string; onAd
         e.preventDefault();
         if (!text.trim()) return;
         setLoading(true);
-        const { error } = await supabase.from("research_comments").insert({
-          post_id: postId, user_id: user?.id ?? null, body: text.trim(),
-        });
-        setLoading(false);
-        if (error) return toast.error(error.message);
-        setText("");
-        onAdded();
+        try {
+          await addDoc(collection(db, "research_comments"), {
+            post_id: postId,
+            user_id: user?.uid ?? null,
+            body: text.trim(),
+            created_at: new Date().toISOString()
+          });
+          setText("");
+          onAdded();
+        } catch (e: any) {
+          toast.error(e.message);
+        } finally {
+          setLoading(false);
+        }
       }}
       className="flex gap-1.5"
     >
@@ -234,20 +277,25 @@ function NewPostDialog({ open, setOpen, user, onCreated }: { open: boolean; setO
             onSubmit={async (e) => {
               e.preventDefault();
               setLoading(true);
-              const { error } = await supabase.from("research_posts").insert({
-                user_id: user?.id ?? null,
-                title: form.title,
-                summary: form.summary || null,
-                source: form.source || null,
-                url: form.url || null,
-                topic: form.topic || null,
-              });
-              setLoading(false);
-              if (error) return toast.error(error.message);
-              toast.success("Research shared!");
-              setOpen(false);
-              setForm({ title: "", summary: "", source: "", url: "", topic: "" });
-              onCreated();
+              try {
+                await addDoc(collection(db, "research_posts"), {
+                  user_id: user?.uid ?? null,
+                  title: form.title,
+                  summary: form.summary || null,
+                  source: form.source || null,
+                  url: form.url || null,
+                  topic: form.topic || null,
+                  created_at: new Date().toISOString()
+                });
+                toast.success("Research shared!");
+                setOpen(false);
+                setForm({ title: "", summary: "", source: "", url: "", topic: "" });
+                onCreated();
+              } catch (e: any) {
+                toast.error(e.message);
+              } finally {
+                setLoading(false);
+              }
             }}
             className="space-y-3"
           >
@@ -278,17 +326,21 @@ function EditPost({ p, onSaved, onCancel }: { p: Post; onSaved: () => void; onCa
       <div className="flex gap-2">
         <Button size="sm" disabled={saving || !form.title.trim()} onClick={async () => {
           setSaving(true);
-          const { error } = await supabase.from("research_posts").update({
-            title: form.title.trim(),
-            summary: form.summary || null,
-            source: form.source || null,
-            url: form.url || null,
-            topic: form.topic || null,
-          }).eq("id", p.id);
-          setSaving(false);
-          if (error) return toast.error(error.message);
-          toast.success("Updated");
-          onSaved();
+          try {
+            await updateDoc(doc(db, "research_posts", p.id), {
+              title: form.title.trim(),
+              summary: form.summary || null,
+              source: form.source || null,
+              url: form.url || null,
+              topic: form.topic || null,
+            });
+            toast.success("Updated");
+            onSaved();
+          } catch (e: any) {
+            toast.error(e.message);
+          } finally {
+            setSaving(false);
+          }
         }}>{saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Check className="h-3 w-3 mr-1" /> Save</>}</Button>
         <Button size="sm" variant="ghost" onClick={onCancel}><X className="h-3 w-3 mr-1" /> Cancel</Button>
       </div>

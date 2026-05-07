@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useAuth } from "@/hooks/use-auth";
 import { useAccountType } from "@/hooks/use-account-type";
 import type { AccountType } from "@/components/AuthProvider";
-import { supabase } from "@/integrations/supabase/client";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 import { Loader2, Sprout, GraduationCap, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -20,17 +21,15 @@ export function AccountTypeGate() {
 
   async function pick(value: Exclude<AccountType, null>) {
     setSaving(value);
-    const { error } = await supabase
-      .from("profiles")
-      .update({ account_type: value })
-      .eq("user_id", user!.id);
-    
-    if (error) {
-      toast.error(error.message);
-      setSaving(null);
-    } else {
+    try {
+      const userRef = doc(db, "profiles", user!.uid);
+      await setDoc(userRef, { account_type: value }, { merge: true });
       toast.success(t("accountType.welcome"));
-      refreshProfile();
+      // The real-time listener in AuthProvider will pick up this change
+      // and close this dialog automatically.
+    } catch (e: any) {
+      console.error("Error updating profile:", e);
+      toast.error(e.message);
       setSaving(null);
     }
   }

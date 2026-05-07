@@ -2,7 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { Leaf, LogIn, LogOut, User as UserIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
@@ -34,7 +35,7 @@ export function TopBar({ title, subtitle }: { title?: string; subtitle?: string 
                 size="icon"
                 variant="ghost"
                 className="h-9 w-9 rounded-full"
-                onClick={() => supabase.auth.signOut()}
+                onClick={() => signOut(auth)}
                 aria-label={t("common.signOut")}
               >
                 <LogOut className="h-4 w-4" />
